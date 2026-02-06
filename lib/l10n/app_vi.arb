@@ -1,0 +1,17 @@
+{
+  "appTitle": "Itemize",
+  "dashboardTitle": "Tổng quan",
+  "totalValue": "Tổng giá trị",
+  "assetsTab": "Tài sản",
+  "settingsTab": "Cài đặt",
+  "searchPlaceholder": "Tìm kiếm tài sản...",
+  "noAssetsFound": "Không tìm thấy tài sản",
+  "addItemTitle": "Thêm tài sản mới",
+  "smartScan": "Quét thông minh (AI)",
+  "scanBarcode": "Quét mã vạch",
+  "scanReceipt": "Quét hóa đơn (OCR)",
+  "exportPdf": "Xuất báo cáo PDF",
+  "biometricLock": "Khóa sinh trắc học",
+  "language": "Ngôn ngữ",
+  "currency": "Tiền tệ"
+}

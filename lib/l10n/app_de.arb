@@ -1,0 +1,17 @@
+{
+  "appTitle": "Itemize",
+  "dashboardTitle": "Instrumententafel",
+  "totalValue": "Gesamtwert",
+  "assetsTab": "Vermögenswerte",
+  "settingsTab": "Einstellungen",
+  "searchPlaceholder": "Assets suchen...",
+  "noAssetsFound": "Keine Assets gefunden",
+  "addItemTitle": "Neues Asset hinzufügen",
+  "smartScan": "Intelligenter Scan (KI)",
+  "scanBarcode": "Barcode scannen",
+  "scanReceipt": "Beleg scannen (OCR)",
+  "exportPdf": "PDF-Bericht exportieren",
+  "biometricLock": "Biometrische Sperre",
+  "language": "Sprache",
+  "currency": "Währung"
+}

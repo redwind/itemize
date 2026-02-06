@@ -1,0 +1,17 @@
+{
+  "appTitle": "Itemize",
+  "dashboardTitle": "Tableau de bord",
+  "totalValue": "Valeur totale",
+  "assetsTab": "Actifs",
+  "settingsTab": "Paramètres",
+  "searchPlaceholder": "Rechercher des actifs...",
+  "noAssetsFound": "Aucun actif trouvé",
+  "addItemTitle": "Ajouter un nouvel actif",
+  "smartScan": "Scan intelligent (IA)",
+  "scanBarcode": "Scanner le code-barres",
+  "scanReceipt": "Scanner le reçu (OCR)",
+  "exportPdf": "Exporter le rapport PDF",
+  "biometricLock": "Verrouillage biométrique",
+  "language": "Langue",
+  "currency": "Devise"
+}
