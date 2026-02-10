@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:itemize/core/utils/ocr_service.dart';
 import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/providers/asset_provider.dart';
+import 'package:itemize/providers/settings_provider.dart';
 import 'package:uuid/uuid.dart';
 
 class AddItemScreen extends ConsumerStatefulWidget {
@@ -149,11 +150,12 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
       // Let's allow no image but warn?
     }
 
+    final settings = ref.read(settingsProvider);
     final newAsset = Asset(
       id: const Uuid().v4(),
       name: _nameController.text,
       price: double.tryParse(_priceController.text) ?? 0.0,
-      currency: 'USD', // Default for now
+      currency: settings.currencyCode,
       category: _categoryController.text,
       imagePath: _imagePath ?? '',
       barcode:
@@ -201,6 +203,7 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = ref.watch(settingsProvider);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add New Asset'),
@@ -286,25 +289,25 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
                             child: TextFormField(
                               controller: _priceController,
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 labelText: 'Price',
-                                prefixIcon: Icon(Icons.attach_money),
+                                prefixText: settings.currencySymbol,
+                                prefixStyle: const TextStyle(fontSize: 16),
                               ),
                               validator: (v) => v!.isEmpty ? 'Required' : null,
                             ),
                           ),
                           const SizedBox(width: 12),
-                          // Currency Dropdown placeholder
+                          // Currency Display
                           Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
+                            child: InputDecorator(
+                              decoration: const InputDecoration(
+                                labelText: 'Currency',
                               ),
-                              child: const Center(
-                                child: Text('USD'),
-                              ), // TODO: Make dynamic
+                              child: Text(
+                                settings.currencyCode,
+                                style: const TextStyle(fontSize: 16),
+                              ),
                             ),
                           ),
                         ],
@@ -384,6 +387,7 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
 
                       // Favorite
                       SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
                         title: const Text('Mark as Favorite'),
                         value: _isFavorite,
                         onChanged: (v) => setState(() => _isFavorite = v),

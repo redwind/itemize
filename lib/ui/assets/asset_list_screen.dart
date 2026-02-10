@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:itemize/core/theme/app_theme.dart';
 import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/providers/asset_provider.dart';
+import 'package:itemize/providers/settings_provider.dart';
+import 'dart:io';
+import 'package:itemize/ui/assets/asset_detail_screen.dart';
 
 class AssetListScreen extends ConsumerStatefulWidget {
   final String? category;
@@ -77,7 +80,7 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final asset = displayAssets[index];
-                    return _buildAssetItem(asset);
+                    return _buildAssetItem(asset, ref);
                   },
                 );
               },
@@ -90,85 +93,94 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
     );
   }
 
-  Widget _buildAssetItem(Asset asset) {
+  Widget _buildAssetItem(Asset asset, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider);
     final bool isExpired =
         asset.warrantyExpiry != null &&
         asset.warrantyExpiry!.isBefore(DateTime.now());
     final warrantyColor = isExpired ? AppTheme.errorRed : AppTheme.successGreen;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        children: [
-          // Thumbnail
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(12),
-              image:
-                  asset.imagePath.isNotEmpty
-                      ? DecorationImage(
-                        image: AssetImage(asset.imagePath),
-                        fit: BoxFit.cover,
-                      )
-                      : null, // Should use FileImage if local path
-            ),
-            child:
-                asset.imagePath.isEmpty
-                    ? const Icon(Icons.image, color: Colors.grey)
-                    : null,
-          ),
-          const SizedBox(width: 16),
-          // Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  asset.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                Text(
-                  '\$${asset.price.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    color: AppTheme.primaryBlue,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  asset.category,
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          // Warranty Badge
-          if (asset.warrantyExpiry != null)
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => AssetDetailScreen(asset: asset)),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            // Thumbnail
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              width: 60,
+              height: 60,
               decoration: BoxDecoration(
-                color: warrantyColor.withAlpha(30),
-                borderRadius: BorderRadius.circular(8),
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(12),
+                image:
+                    asset.imagePath.isNotEmpty
+                        ? DecorationImage(
+                          image: FileImage(File(asset.imagePath)),
+                          fit: BoxFit.cover,
+                        )
+                        : null, // Should use FileImage if local path
               ),
-              child: Text(
-                isExpired ? 'Exp' : 'Warranty',
-                style: TextStyle(
-                  color: warrantyColor,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
+              child:
+                  asset.imagePath.isEmpty
+                      ? const Icon(Icons.image, color: Colors.grey)
+                      : null,
+            ),
+            const SizedBox(width: 16),
+            // Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    asset.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  Text(
+                    '${settings.currencySymbol}${asset.price.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      color: AppTheme.primaryBlue,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    asset.category,
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                ],
               ),
             ),
-        ],
+            // Warranty Badge
+            if (asset.warrantyExpiry != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: warrantyColor.withAlpha(30),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  isExpired ? 'Exp' : 'Warranty',
+                  style: TextStyle(
+                    color: warrantyColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

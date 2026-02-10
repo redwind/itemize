@@ -12,6 +12,14 @@
   "scanReceipt": "Quét hóa đơn (OCR)",
   "exportPdf": "Xuất báo cáo PDF",
   "biometricLock": "Khóa sinh trắc học",
+  "biometricLockSubtitle": "Yêu cầu FaceID/TouchID cho các tác vụ nhạy cảm",
   "language": "Ngôn ngữ",
-  "currency": "Tiền tệ"
+  "currency": "Tiền tệ",
+  "dataManagement": "Quản lý dữ liệu",
+  "exportPdfSubtitle": "Tạo báo cáo bảo hiểm",
+  "backupData": "Sao lưu dữ liệu",
+  "backupDataSubtitle": "Sao lưu cục bộ (Sắp ra mắt)",
+  "preferences": "Tùy chọn",
+  "about": "Giới thiệu",
+  "version": "Phiên bản"
 }

@@ -12,6 +12,14 @@
   "scanReceipt": "Beleg scannen (OCR)",
   "exportPdf": "PDF-Bericht exportieren",
   "biometricLock": "Biometrische Sperre",
+  "biometricLockSubtitle": "Erfordert FaceID/TouchID für sensible Aktionen",
   "language": "Sprache",
-  "currency": "Währung"
+  "currency": "Währung",
+  "dataManagement": "Datenverwaltung",
+  "exportPdfSubtitle": "Versicherungsbericht erstellen",
+  "backupData": "Daten sichern",
+  "backupDataSubtitle": "Lokales Backup (Demnächst)",
+  "preferences": "Einstellungen",
+  "about": "Über",
+  "version": "Version"
 }

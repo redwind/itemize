@@ -12,6 +12,14 @@
   "scanReceipt": "Scanner le reçu (OCR)",
   "exportPdf": "Exporter le rapport PDF",
   "biometricLock": "Verrouillage biométrique",
+  "biometricLockSubtitle": "Nécessite FaceID/TouchID pour les actions sensibles",
   "language": "Langue",
-  "currency": "Devise"
+  "currency": "Devise",
+  "dataManagement": "Gestion des données",
+  "exportPdfSubtitle": "Générer un rapport d'assurance",
+  "backupData": "Sauvegarder les données",
+  "backupDataSubtitle": "Sauvegarde locale (Bientôt disponible)",
+  "preferences": "Préférences",
+  "about": "À propos",
+  "version": "Version"
 }

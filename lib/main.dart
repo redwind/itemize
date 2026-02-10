@@ -5,12 +5,21 @@ import 'package:itemize/core/theme/app_theme.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:itemize/providers/settings_provider.dart';
 import 'package:itemize/ui/common/main_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:itemize/ui/common/biometric_guard.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Initialize other services (ML Kit, etc if needed lazily)
 
-  runApp(const ProviderScope(child: ItemizeApp()));
+  final prefs = await SharedPreferences.getInstance();
+
+  runApp(
+    ProviderScope(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      child: const ItemizeApp(),
+    ),
+  );
 }
 
 class ItemizeApp extends ConsumerWidget {
@@ -37,7 +46,7 @@ class ItemizeApp extends ConsumerWidget {
         Locale('fr'),
         Locale('de'),
       ],
-      home: const MainScreen(),
+      home: const BiometricGuard(child: MainScreen()),
     );
   }
 }

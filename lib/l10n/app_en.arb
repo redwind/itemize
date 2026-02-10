@@ -12,6 +12,14 @@
   "scanReceipt": "Scan Receipt (OCR)",
   "exportPdf": "Export Report to PDF",
   "biometricLock": "Biometric Lock",
+  "biometricLockSubtitle": "Require FaceID/TouchID for sensitive actions",
   "language": "Language",
-  "currency": "Currency"
+  "currency": "Currency",
+  "dataManagement": "Data Management",
+  "exportPdfSubtitle": "Generate insurance report",
+  "backupData": "Backup Data",
+  "backupDataSubtitle": "Local backup (Coming Soon)",
+  "preferences": "Preferences",
+  "about": "About",
+  "version": "Version"
 }

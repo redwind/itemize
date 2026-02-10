@@ -24,36 +24,49 @@ class AppSettings {
       languageCode: languageCode ?? this.languageCode,
     );
   }
+
+  String get currencySymbol {
+    switch (currencyCode) {
+      case 'EUR':
+        return '€';
+      case 'GBP':
+        return '£';
+      case 'VND':
+        return '₫';
+      case 'USD':
+      default:
+        return '\$';
+    }
+  }
 }
 
-class SettingsNotifier extends StateNotifier<AppSettings> {
-  SettingsNotifier() : super(AppSettings()) {
-    _loadSettings();
-  }
+final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
+  throw UnimplementedError();
+});
 
-  Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    state = AppSettings(
-      isBiometricEnabled: prefs.getBool('isBiometricEnabled') ?? false,
-      currencyCode: prefs.getString('currencyCode') ?? 'USD',
-      languageCode: prefs.getString('languageCode') ?? 'en',
-    );
-  }
+class SettingsNotifier extends StateNotifier<AppSettings> {
+  final SharedPreferences prefs;
+
+  SettingsNotifier(this.prefs)
+    : super(
+        AppSettings(
+          isBiometricEnabled: prefs.getBool('isBiometricEnabled') ?? false,
+          currencyCode: prefs.getString('currencyCode') ?? 'USD',
+          languageCode: prefs.getString('languageCode') ?? 'en',
+        ),
+      );
 
   Future<void> toggleBiometric(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isBiometricEnabled', value);
     state = state.copyWith(isBiometricEnabled: value);
   }
 
   Future<void> setCurrency(String code) async {
-    final prefs = await SharedPreferences.getInstance();
     await prefs.setString('currencyCode', code);
     state = state.copyWith(currencyCode: code);
   }
 
   Future<void> setLanguage(String code) async {
-    final prefs = await SharedPreferences.getInstance();
     await prefs.setString('languageCode', code);
     state = state.copyWith(languageCode: code);
   }
@@ -62,5 +75,6 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
 final settingsProvider = StateNotifierProvider<SettingsNotifier, AppSettings>((
   ref,
 ) {
-  return SettingsNotifier();
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return SettingsNotifier(prefs);
 });

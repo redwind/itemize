@@ -5,7 +5,10 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 class PDFService {
-  Future<Uint8List> generateAssetsReport(List<Asset> assets) async {
+  Future<Uint8List> generateAssetsReport(
+    List<Asset> assets,
+    String currencySymbol,
+  ) async {
     final doc = pw.Document();
 
     // Load font if needed (printing package uses default usually)
@@ -48,7 +51,7 @@ class PDFService {
                     style: pw.TextStyle(fontSize: 16),
                   ),
                   pw.Text(
-                    'Total Value: \$${totalValue.toStringAsFixed(2)}',
+                    'Total Value: $currencySymbol${totalValue.toStringAsFixed(2)}',
                     style: pw.TextStyle(
                       fontSize: 16,
                       fontWeight: pw.FontWeight.bold,
@@ -65,7 +68,7 @@ class PDFService {
                     return [
                       asset.name,
                       asset.category,
-                      '\$${asset.price.toStringAsFixed(2)}',
+                      '$currencySymbol${asset.price.toStringAsFixed(2)}',
                       asset.purchaseDate.toIso8601String().split('T')[0],
                     ];
                   }).toList(),
@@ -95,8 +98,11 @@ class PDFService {
     return await doc.save();
   }
 
-  Future<void> printOrShareReport(List<Asset> assets) async {
-    final pdfBytes = await generateAssetsReport(assets);
+  Future<void> printOrShareReport(
+    List<Asset> assets,
+    String currencySymbol,
+  ) async {
+    final pdfBytes = await generateAssetsReport(assets, currencySymbol);
     await Printing.sharePdf(bytes: pdfBytes, filename: 'itemize_report.pdf');
   }
 }

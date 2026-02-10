@@ -25,7 +25,7 @@ class AuthService {
         localizedReason: reason,
         options: const AuthenticationOptions(
           stickyAuth: true,
-          biometricOnly: false, // Allow PIN/Pattern fallback
+          biometricOnly: false,
         ),
       );
 
@@ -38,7 +38,8 @@ class AuthService {
       return didAuthenticate;
     } on PlatformException catch (e) {
       if (kDebugMode) print("Authentication error: $e");
-      return false;
+      // Rethrow to let UI handle specific errors like 'NotAvailable'
+      rethrow;
     }
   }
 }
