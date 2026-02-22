@@ -10,6 +10,8 @@ import 'package:itemize/core/utils/ocr_service.dart';
 import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/providers/asset_provider.dart';
 import 'package:itemize/providers/settings_provider.dart';
+import 'package:itemize/providers/pro_provider.dart';
+import 'package:itemize/ui/settings/paywall_screen.dart';
 import 'package:uuid/uuid.dart';
 
 class AddItemScreen extends ConsumerStatefulWidget {
@@ -67,14 +69,28 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
   }
 
   Future<void> _scanBarcode() async {
-    // In valid flow, pick image for barcode or separate scanner view?
-    // ML Kit usually works on images. Let's pick image specifically for scan or use camera stream (complex).
-    // For MVP, taking a picture to scan is easier to implement quickly.
+    final proState = ref.read(proProvider);
+    final proNotifier = ref.read(proProvider.notifier);
 
+    if (!proState.canScan) {
+      _showLimitReachedDialog(
+        "Daily Scan Limit Reached",
+        "Upgrade to Pro for unlimited AI scans.",
+      );
+      return;
+    }
+
+    // ... (existing image picker logic) ...
     final XFile? image = await _imagePicker.pickImage(
       source: ImageSource.camera,
     );
     if (image == null) return;
+
+    if (!proState.isPro) {
+      await proNotifier.incrementScanCount();
+    }
+
+    // ... (rest of logic)
 
     setState(() => _isProcessingAI = true);
 
@@ -100,10 +116,25 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
   }
 
   Future<void> _scanReceipt() async {
+    final proState = ref.read(proProvider);
+    final proNotifier = ref.read(proProvider.notifier);
+
+    if (!proState.canScan) {
+      _showLimitReachedDialog(
+        "Daily Scan Limit Reached",
+        "Upgrade to Pro for unlimited AI scans.",
+      );
+      return;
+    }
+
     final XFile? image = await _imagePicker.pickImage(
       source: ImageSource.camera,
     );
     if (image == null) return;
+
+    if (!proState.isPro) {
+      await proNotifier.incrementScanCount();
+    }
 
     setState(() => _isProcessingAI = true);
 
@@ -114,23 +145,14 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
       if (data['price'] != null && data['price'] != 0.0)
         _priceController.text = data['price'].toString();
 
-      // Date parsing logic in OCRService might return raw string, we need to parse to DateTime if possible
-      // Assuming OCRService returns raw string or specific format, let's say we parse it here if needed or it was already parsed?
-      // OCRService currently returns String for date? Let's check. It returns String? date.
-
       if (data['date'] != null) {
-        // Very basic parser, assuming MM/DD/YYYY or similar from OCRService regex
-        try {
-          // DateFormat attempts
-          // Fixme: robust parsing needed
-        } catch (_) {}
+        // Basic parser placeholder
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Receipt Scanned! Verify details.")),
       );
 
-      // Also set the image as the item image if user wants?
       setState(() {
         _imagePath = image.path;
       });
@@ -145,6 +167,19 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
 
   Future<void> _saveAsset() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Check Asset Limit
+    final proState = ref.read(proProvider);
+    final assets = ref.read(assetListProvider).asData?.value ?? [];
+
+    if (!proState.isPro && assets.length >= kFreeAssetLimit) {
+      _showLimitReachedDialog(
+        "Asset Limit Reached",
+        "Free version is limited to $kFreeAssetLimit items. Upgrade to Pro for unlimited storage.",
+      );
+      return;
+    }
+
     if (_imagePath == null) {
       // Allow no image? Or require it?
       // Let's allow no image but warn?
@@ -169,6 +204,33 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
     await HapticFeedback.mediumImpact();
 
     if (mounted) Navigator.pop(context);
+  }
+
+  void _showLimitReachedDialog(String title, String content) {
+    showDialog(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: Text(title),
+            content: Text(content),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PaywallScreen()),
+                  );
+                },
+                child: const Text('Upgrade'),
+              ),
+            ],
+          ),
+    );
   }
 
   void _showSmartScanOptions() {

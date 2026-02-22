@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,8 @@ import 'package:itemize/core/utils/auth_service.dart';
 // import 'package:itemize/core/utils/pdf_service.dart';
 import 'package:itemize/providers/asset_provider.dart';
 import 'package:itemize/providers/settings_provider.dart';
+import 'package:itemize/providers/pro_provider.dart';
+import 'package:itemize/ui/settings/paywall_screen.dart';
 import 'package:itemize/ui/settings/pdf_preview_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -16,6 +19,7 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
     final settingsNotifier = ref.read(settingsProvider.notifier);
+    final proState = ref.watch(proProvider);
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
@@ -23,7 +27,42 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         children: [
           const SizedBox(height: 20),
-          _buildSectionHeader(l10n.dataManagement),
+          const SizedBox(height: 20),
+
+          if (!proState.isPro)
+            Card(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: Colors.purple.shade50,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Colors.purple.shade100),
+              ),
+              child: ListTile(
+                leading: const Icon(Icons.diamond, color: Colors.purple),
+                title: const Text(
+                  "Upgrade to Pro",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.purple,
+                  ),
+                ),
+                subtitle: const Text(
+                  "Unlock unlimited items, biometrics, and more.",
+                ),
+                trailing: const Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.purple,
+                ),
+                onTap:
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const PaywallScreen()),
+                    ),
+              ),
+            ),
+
           ListTile(
             leading: const Icon(
               Icons.picture_as_pdf,
@@ -140,11 +179,25 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           SwitchListTile(
-            secondary: const Icon(Icons.fingerprint, color: Colors.purple),
+            secondary: Icon(
+              Icons.fingerprint,
+              color: proState.isPro ? Colors.purple : Colors.grey,
+            ),
             title: Text(l10n.biometricLock),
-            subtitle: Text(l10n.biometricLockSubtitle),
+            subtitle: Text(
+              proState.isPro
+                  ? l10n.biometricLockSubtitle
+                  : "Available in Pro Version",
+            ),
             value: settings.isBiometricEnabled,
             onChanged: (val) async {
+              if (!proState.isPro) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PaywallScreen()),
+                );
+                return;
+              }
               try {
                 if (val) {
                   // Verify before enabling
@@ -203,6 +256,29 @@ class SettingsScreen extends ConsumerWidget {
           const Divider(),
           _buildSectionHeader(l10n.about),
           ListTile(title: Text(l10n.version), trailing: const Text('1.0.0')),
+
+          if (proState.isPro && kDebugMode) ...[
+            const Divider(),
+            _buildSectionHeader("Debug (Dev Only)"),
+            ListTile(
+              title: const Text(
+                "Cancel Pro Subscription",
+                style: TextStyle(color: Colors.red),
+              ),
+              onTap: () async {
+                await ref.read(proProvider.notifier).debugCancelPro();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        "Pro status wiped. Redirecting to store...",
+                      ),
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
         ],
       ),
     );

@@ -21,3 +21,10 @@
 # Google Play Core (Split Install / Deferred Components)
 # Suppress warnings for Play Core definition classes if not using dynamic features
 -dontwarn com.google.android.play.core.**
+
+# RevenueCat
+-keep class com.revenuecat.purchases.** { *; }
+-keep class com.revenuecat.purchases.common.** { *; }
+-keep class com.revenuecat.purchases.hybridcommon.** { *; }
+-keep class com.revenuecat.purchases.ui.revenuecatui.** { *; }
+-keepattributes *Annotation*
