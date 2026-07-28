@@ -9,6 +9,7 @@ import 'package:itemize/providers/pro_provider.dart';
 import 'package:itemize/ui/settings/paywall_screen.dart';
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
+import 'package:itemize/l10n/app_localizations.dart';
 
 class PdfPreviewScreen extends ConsumerWidget {
   final List<Asset> assets;
@@ -32,6 +33,9 @@ class PdfPreviewScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isPro = ref.watch(proProvider).isPro;
+    // Resolved before the builder rather than inside it: PdfPreview calls that
+    // builder asynchronously, by which time reading a BuildContext is unsafe.
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: const _PreviewBar(),
@@ -44,6 +48,7 @@ class PdfPreviewScreen extends ConsumerWidget {
                   (format) async => PDFService().generateAssetsReport(
                     assets,
                     ref.read(settingsProvider).formatAmount,
+                    l10n: l10n,
                     isPro: isPro,
                     serviceHistory: isPro ? await _history(ref) : const {},
                   ),
@@ -67,7 +72,7 @@ class _PreviewBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) =>
-      AppBar(title: const Text('Report Preview'));
+      AppBar(title: Text(AppLocalizations.of(context)!.reportPreview));
 }
 
 /// Says what the paid document adds, on the screen where it matters.
@@ -86,6 +91,8 @@ class _UpgradeBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
@@ -100,10 +107,10 @@ class _UpgradeBanner extends StatelessWidget {
             children: [
               const Icon(Icons.description, size: 18, color: Colors.purple),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'This is the summary report',
-                  style: TextStyle(
+                  l10n.summaryReportBanner,
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.purple,
                   ),
@@ -113,10 +120,7 @@ class _UpgradeBanner extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Pro turns it into the document an insurer asks for: a page for '
-            'each of your $itemCount items with its photographs, serial '
-            'number, receipt, service history and estimated value today — '
-            'plus a signed declaration.',
+            l10n.summaryReportBannerBody(itemCount),
             style: const TextStyle(fontSize: 13),
           ),
           const SizedBox(height: 10),
@@ -135,15 +139,15 @@ class _UpgradeBanner extends StatelessWidget {
                   foregroundColor: Colors.white,
                   visualDensity: VisualDensity.compact,
                 ),
-                child: const Text('See what Pro adds'),
+                child: Text(l10n.seeWhatProAdds),
               ),
               const SizedBox(width: 12),
               // The free report is still worth having, and saying so keeps this
               // from reading as a locked door.
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'You can still share or print this one.',
-                  style: TextStyle(fontSize: 11, color: Colors.black54),
+                  l10n.canStillShare,
+                  style: const TextStyle(fontSize: 11, color: Colors.black54),
                 ),
               ),
             ],

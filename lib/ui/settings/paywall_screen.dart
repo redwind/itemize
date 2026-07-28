@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:itemize/providers/pro_provider.dart';
+import 'package:itemize/l10n/app_localizations.dart';
 
 class PaywallScreen extends ConsumerWidget {
   const PaywallScreen({super.key});
@@ -9,6 +10,7 @@ class PaywallScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final proState = ref.watch(proProvider);
     final proNotifier = ref.read(proProvider.notifier);
+    final l10n = AppLocalizations.of(context)!;
 
     // Listen for state changes
     ref.listen(proProvider, (previous, next) {
@@ -29,14 +31,14 @@ class PaywallScreen extends ConsumerWidget {
         if (next.successMessage == null) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text("Welcome to Pro!")));
+          ).showSnackBar(SnackBar(content: Text(l10n.welcomeToPro)));
         }
         Navigator.pop(context);
       }
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Upgrade to Pro')),
+      appBar: AppBar(title: Text(l10n.upgradeToPro)),
       body: Stack(
         children: [
           SingleChildScrollView(
@@ -55,49 +57,47 @@ class PaywallScreen extends ConsumerWidget {
                       ),
                     );
                   },
-                  child: const Text(
-                    'Unlock Full Potential',
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                  child: Text(
+                    l10n.unlockFullPotential,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Recording and looking after your things is free, unlimited, '
-                  'and stays that way. Pro is for getting it back out.',
-                  style: TextStyle(fontSize: 15, color: Colors.grey),
+                Text(
+                  l10n.paywallLead,
+                  style: const TextStyle(fontSize: 15, color: Colors.grey),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
 
                 _buildBenefitItem(
                   Icons.description,
-                  'Insurance Report',
-                  'A page for every item — photos, serial number, receipt, '
-                      'service history and estimated current value, grouped by '
-                      'room and signed.',
+                  l10n.paywallReport,
+                  l10n.paywallReportBody,
                 ),
                 _buildBenefitItem(
                   Icons.save_alt,
-                  'Backup & Restore',
-                  'Every item, photo and year of service history in one file '
-                      'you keep. No account, no cloud, nothing leaves your '
-                      'device unless you send it.',
+                  l10n.paywallBackup,
+                  l10n.paywallBackupBody,
                 ),
                 _buildBenefitItem(
                   Icons.fingerprint,
-                  'Biometric Lock',
-                  'Keep the inventory behind FaceID or TouchID.',
+                  l10n.paywallBiometric,
+                  l10n.paywallBiometricBody,
                 ),
 
                 const SizedBox(height: 32),
 
                 if (!proState.isStoreAvailable && !proState.isLoading)
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 16),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
                     child: Text(
-                      'The store is unavailable right now. Please try again later.',
-                      style: TextStyle(color: Colors.redAccent),
+                      l10n.storeUnavailable,
+                      style: const TextStyle(color: Colors.redAccent),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -118,8 +118,8 @@ class PaywallScreen extends ConsumerWidget {
                     // Priced by the store, so the figure is right in every
                     // currency and stays right if the price ever changes.
                     proState.priceString == null
-                        ? 'Upgrade'
-                        : 'Upgrade for ${proState.priceString}',
+                        ? l10n.upgrade
+                        : l10n.upgradeFor(proState.priceString!),
                     style: const TextStyle(
                       fontSize: 18,
                       color: Colors.white,
@@ -133,14 +133,14 @@ class PaywallScreen extends ConsumerWidget {
                       proState.isLoading || !proState.isStoreAvailable
                           ? null
                           : () => proNotifier.restorePurchases(),
-                  child: const Text('Restore Purchases'),
+                  child: Text(l10n.restorePurchases),
                 ),
                 const SizedBox(height: 20),
                 if (proState.proPackage != null)
                   Text(
                     proState.isSubscription
-                        ? 'Renews automatically until cancelled. Manage or cancel any time in your account settings.'
-                        : 'One-time purchase. No subscription.',
+                        ? l10n.subscriptionFinePrint
+                        : l10n.oneTimeFinePrint,
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                     textAlign: TextAlign.center,
                   ),

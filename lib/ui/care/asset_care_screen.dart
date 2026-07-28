@@ -11,6 +11,8 @@ import 'package:itemize/providers/asset_provider.dart';
 import 'package:itemize/providers/settings_provider.dart';
 import 'package:itemize/ui/care/schedule_editor.dart';
 import 'package:itemize/ui/care/service_editor.dart';
+import 'package:itemize/l10n/app_localizations.dart';
+import 'package:itemize/l10n/domain_labels.dart';
 
 /// Everything about looking after one item: what it needs, what has been done,
 /// and what it has cost.
@@ -24,6 +26,7 @@ class AssetCareScreen extends ConsumerWidget {
     final schedules = ref.watch(schedulesForAssetProvider(asset.id));
     final records = ref.watch(serviceRecordsProvider(asset.id));
     final settings = ref.watch(settingsProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(title: Text(asset.name)),
@@ -31,7 +34,7 @@ class AssetCareScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         children: [
           _sectionHeader(
-            'Scheduled jobs',
+            l10n.scheduledJobs,
             onAdd: () => _addSchedule(context, ref),
           ),
           schedules.when(
@@ -40,11 +43,7 @@ class AssetCareScreen extends ConsumerWidget {
             data:
                 (list) =>
                     list.isEmpty
-                        ? const _Empty(
-                          'Nothing scheduled. Add the jobs this needs — a '
-                          'filter, a service — and you will be told when '
-                          'they fall due.',
-                        )
+                        ? _Empty(l10n.noSchedulesYet)
                         : Column(
                           children: [
                             for (final schedule in list)
@@ -71,25 +70,21 @@ class AssetCareScreen extends ConsumerWidget {
           ),
 
           const SizedBox(height: 24),
-          _sectionHeader('History', onAdd: () => _logService(context, ref)),
+          _sectionHeader(l10n.history, onAdd: () => _logService(context, ref)),
           records.when(
             loading: () => const _Loading(),
             error: (e, _) => Text('Error: $e'),
             data:
                 (list) =>
                     list.isEmpty
-                        ? const _Empty(
-                          'No work recorded yet. Logging repairs is what makes '
-                          'the running cost below mean anything — and what a '
-                          'manufacturer asks for when a warranty claim turns '
-                          'on whether it was serviced.',
-                        )
+                        ? _Empty(l10n.noHistoryYet)
                         : Column(
                           children: [
                             for (final record in list)
                               _RecordTile(
                                 record: record,
                                 settings: settings,
+                                l10n: l10n,
                                 onDelete:
                                     () => _deleteRecord(ref, record.id),
                               ),
@@ -128,7 +123,9 @@ class AssetCareScreen extends ConsumerWidget {
         TextButton.icon(
           onPressed: onAdd,
           icon: const Icon(Icons.add, size: 18),
-          label: const Text('Add'),
+          label: Builder(
+            builder: (c) => Text(AppLocalizations.of(c)!.add),
+          ),
         ),
       ],
     );
@@ -208,6 +205,7 @@ class _ScheduleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final due = MaintenanceDue(
       asset: asset,
       schedule: schedule,
@@ -232,8 +230,11 @@ class _ScheduleTile extends StatelessWidget {
             title: Text(schedule.title),
             subtitle: Text(
               overdue
-                  ? 'Overdue by ${-days} days · every ${schedule.intervalMonths} mo'
-                  : 'Due ${DateFormat.yMMMd().format(due.dueAt)} · every ${schedule.intervalMonths} mo',
+                  ? l10n.overdueByEvery(-days, schedule.intervalMonths)
+                  : l10n.dueOnEvery(
+                    DateFormat.yMMMd().format(due.dueAt),
+                    schedule.intervalMonths,
+                  ),
               style: TextStyle(
                 color: overdue ? AppTheme.errorRed : Colors.grey,
                 fontSize: 12,
@@ -245,9 +246,9 @@ class _ScheduleTile extends StatelessWidget {
                 if (value == 'delete') onDelete();
               },
               itemBuilder:
-                  (_) => const [
-                    PopupMenuItem(value: 'edit', child: Text('Edit')),
-                    PopupMenuItem(value: 'delete', child: Text('Delete')),
+                  (_) => [
+                    PopupMenuItem(value: 'edit', child: Text(l10n.edit)),
+                    PopupMenuItem(value: 'delete', child: Text(l10n.delete)),
                   ],
             ),
             onTap: onLog,
@@ -265,12 +266,10 @@ class _ScheduleTile extends StatelessWidget {
                     color: AppTheme.errorRed,
                   ),
                   const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'This item is still under warranty, and this job is '
-                      'required to keep it valid. A missed service is grounds '
-                      'to decline a claim.',
-                      style: TextStyle(
+                      l10n.warrantyAtRiskItem,
+                      style: const TextStyle(
                         fontSize: 12,
                         color: AppTheme.errorRed,
                       ),
@@ -288,11 +287,13 @@ class _ScheduleTile extends StatelessWidget {
 class _RecordTile extends StatelessWidget {
   final ServiceRecord record;
   final AppSettings settings;
+  final AppLocalizations l10n;
   final VoidCallback onDelete;
 
   const _RecordTile({
     required this.record,
     required this.settings,
+    required this.l10n,
     required this.onDelete,
   });
 
@@ -311,7 +312,7 @@ class _RecordTile extends StatelessWidget {
       title: Text(
         record.description?.isNotEmpty == true
             ? record.description!
-            : record.kind.label,
+            : l10n.serviceKindLabel(record.kind),
       ),
       subtitle: Text(
         [
@@ -324,7 +325,7 @@ class _RecordTile extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            record.cost > 0 ? settings.formatAmount(record.cost) : 'Free',
+            record.cost > 0 ? settings.formatAmount(record.cost) : l10n.free,
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
           IconButton(
@@ -345,10 +346,11 @@ class _CostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final (color, headline) = switch (cost.verdict) {
-      OwnershipVerdict.healthy => (AppTheme.successGreen, 'Worth keeping'),
-      OwnershipVerdict.watch => (Colors.orange.shade800, 'Worth watching'),
-      OwnershipVerdict.replace => (AppTheme.errorRed, 'Worth replacing'),
+      OwnershipVerdict.healthy => (AppTheme.successGreen, l10n.verdictKeep),
+      OwnershipVerdict.watch => (Colors.orange.shade800, l10n.verdictWatch),
+      OwnershipVerdict.replace => (AppTheme.errorRed, l10n.verdictReplace),
     };
 
     return Container(
@@ -366,33 +368,28 @@ class _CostCard extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.bold, color: color),
           ),
           const SizedBox(height: 12),
-          _row('Paid for it', settings.formatAmount(cost.purchasePrice)),
-          _row('Spent on repairs', settings.formatAmount(cost.serviceSpend)),
-          _row('Worth today', settings.formatAmount(cost.estimatedValue)),
+          _row(l10n.paidForIt, settings.formatAmount(cost.purchasePrice)),
+          _row(l10n.spentOnRepairs, settings.formatAmount(cost.serviceSpend)),
+          _row(l10n.worthToday, settings.formatAmount(cost.estimatedValue)),
           const Divider(height: 20),
           _row(
-            'Total outlay',
+            l10n.totalOutlay,
             settings.formatAmount(cost.totalOutlay),
             bold: true,
           ),
           const SizedBox(height: 8),
           Text(
             switch (cost.verdict) {
-              OwnershipVerdict.healthy =>
-                'Repairs are small against what it is still worth.',
-              OwnershipVerdict.watch =>
-                'Repairs have passed half its remaining value. Worth thinking '
-                    'twice about the next one.',
-              OwnershipVerdict.replace =>
-                'You have spent more mending this than it is now worth. A '
-                    'replacement may cost less than the next repair.',
+              OwnershipVerdict.healthy => l10n.verdictKeepBody,
+              OwnershipVerdict.watch => l10n.verdictWatchBody,
+              OwnershipVerdict.replace => l10n.verdictReplaceBody,
             },
             style: const TextStyle(fontSize: 12, color: Colors.black87),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'A rule of thumb on estimated values, not a valuation.',
-            style: TextStyle(fontSize: 11, color: Colors.grey),
+          Text(
+            l10n.verdictDisclaimer,
+            style: const TextStyle(fontSize: 11, color: Colors.grey),
           ),
         ],
       ),

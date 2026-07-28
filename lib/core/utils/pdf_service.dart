@@ -7,6 +7,8 @@ import 'package:intl/intl.dart';
 import 'package:itemize/core/utils/depreciation.dart';
 import 'package:itemize/core/utils/image_storage.dart';
 import 'package:itemize/data/models/asset.dart';
+import 'package:itemize/l10n/app_localizations.dart';
+import 'package:itemize/l10n/domain_labels.dart';
 import 'package:itemize/data/models/service_record.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -27,6 +29,12 @@ const int _kExtraPhotosPerItem = 2;
 class PDFService {
   /// Builds the report.
   ///
+  /// Every date is formatted against `l10n.localeName` rather than against the
+  /// ambient `Intl.defaultLocale`. A document that says "Inventaire du mobilier"
+  /// above "July 28, 2026" is worse than one in either language alone, and
+  /// relying on global state made that depend on whether something else had got
+  /// round to setting it.
+  ///
   /// The Pro document is the one the paywall has always described: every item
   /// on its own row with photographs, serial number, receipt and an estimated
   /// current value, grouped by room and signed at the end. The free document is
@@ -34,6 +42,7 @@ class PDFService {
   Future<Uint8List> generateAssetsReport(
     List<Asset> assets,
     String Function(double) formatAmount, {
+    required AppLocalizations l10n,
     bool isPro = false,
     Map<String, List<ServiceRecord>> serviceHistory = const {},
   }) async {
@@ -49,7 +58,7 @@ class PDFService {
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
-        footer: (context) => _footer(context, isPro, generatedAt),
+        footer: (context) => _footer(context, isPro, generatedAt, l10n),
         build:
             (context) => [
               ..._coverBlock(
@@ -58,17 +67,24 @@ class PDFService {
                 formatAmount: formatAmount,
                 generatedAt: generatedAt,
                 isPro: isPro,
+                l10n: l10n,
               ),
               pw.SizedBox(height: 24),
-              ..._roomTables(assets, formatAmount, isPro: isPro),
+              ..._roomTables(assets, formatAmount, isPro: isPro, l10n: l10n),
               if (isPro) ...[
                 pw.SizedBox(height: 24),
-                ..._itemDetails(assets, formatAmount, images, serviceHistory),
+                ..._itemDetails(
+                  assets,
+                  formatAmount,
+                  images,
+                  serviceHistory,
+                  l10n,
+                ),
                 pw.SizedBox(height: 24),
-                ..._declarationBlock(generatedAt),
+                ..._declarationBlock(generatedAt, l10n),
               ] else ...[
                 pw.SizedBox(height: 24),
-                _upgradeNotice(),
+                _upgradeNotice(l10n),
               ],
             ],
       ),
@@ -122,6 +138,7 @@ class PDFService {
     required String Function(double) formatAmount,
     required DateTime generatedAt,
     required bool isPro,
+    required AppLocalizations l10n,
   }) {
     final rooms = assets.map((a) => a.room).toSet().length;
     final withSerial =
@@ -137,32 +154,35 @@ class PDFService {
           crossAxisAlignment: pw.CrossAxisAlignment.end,
           children: [
             pw.Text(
-              isPro ? 'Home Inventory Report' : 'Itemize Report',
+              isPro ? l10n.reportTitlePro : l10n.reportTitleFree,
               style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
             ),
-            pw.Text(DateFormat.yMMMMd().format(generatedAt)),
+            pw.Text(DateFormat.yMMMMd(l10n.localeName).format(generatedAt)),
           ],
         ),
       ),
       pw.SizedBox(height: 16),
       _summaryTable([
-        ['Items recorded', '${assets.length}'],
-        ['Rooms covered', '$rooms'],
-        ['Total purchase price', formatAmount(summary.totalPaid)],
+        [l10n.reportItemsRecorded, '${assets.length}'],
+        [l10n.reportRoomsCovered, '$rooms'],
+        [l10n.reportTotalPaid, formatAmount(summary.totalPaid)],
         if (isPro) ...[
-          ['Estimated value today', formatAmount(summary.totalCurrent)],
-          ['Estimated depreciation', formatAmount(summary.totalLoss)],
-          ['Items with a serial number', '$withSerial of ${assets.length}'],
-          ['Items with a receipt attached', '$withReceipt of ${assets.length}'],
+          [l10n.reportEstimatedToday, formatAmount(summary.totalCurrent)],
+          [l10n.reportDepreciation, formatAmount(summary.totalLoss)],
+          [
+            l10n.reportWithSerial,
+            l10n.reportOfTotal(withSerial, assets.length),
+          ],
+          [
+            l10n.reportWithReceipt,
+            l10n.reportOfTotal(withReceipt, assets.length),
+          ],
         ],
       ]),
       if (isPro) ...[
         pw.SizedBox(height: 12),
         pw.Text(
-          'Estimated values are straight-line figures based on conventional '
-          'useful life by category. They are provided to help you check your '
-          'cover and are not a valuation; your insurer may apply a different '
-          'schedule.',
+          l10n.reportEstimateDisclaimer,
           style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
         ),
       ],
@@ -211,9 +231,10 @@ class PDFService {
     List<Asset> assets,
     String Function(double) formatAmount, {
     required bool isPro,
+    required AppLocalizations l10n,
   }) {
     if (assets.isEmpty) {
-      return [pw.Text('No items recorded.')];
+      return [pw.Text(l10n.reportNoItems)];
     }
 
     final byRoom = <String, List<Asset>>{};
@@ -224,26 +245,26 @@ class PDFService {
 
     return [
       for (final room in rooms) ...[
-        pw.Header(level: 1, text: room),
+        pw.Header(level: 1, text: l10n.roomLabel(room)),
         pw.TableHelper.fromTextArray(
           headers: [
-            'Item',
-            'Category',
-            'Serial / Model',
-            'Purchased',
-            'Paid',
-            if (isPro) 'Est. today',
+            l10n.reportColItem,
+            l10n.category,
+            l10n.reportColSerialModel,
+            l10n.reportColPurchased,
+            l10n.reportColPaid,
+            if (isPro) l10n.reportColToday,
           ],
           data: [
             for (final asset in byRoom[room]!)
               [
                 asset.name,
-                asset.category,
+                l10n.categoryLabel(asset.category),
                 [
                   asset.serialNumber,
                   asset.model,
                 ].where((v) => v != null && v.isNotEmpty).join(' / '),
-                DateFormat.yMd().format(asset.purchaseDate),
+                DateFormat.yMd(l10n.localeName).format(asset.purchaseDate),
                 formatAmount(asset.price),
                 if (isPro) formatAmount(Depreciation.currentValue(asset)),
               ],
@@ -267,8 +288,12 @@ class PDFService {
         pw.Align(
           alignment: pw.Alignment.centerRight,
           child: pw.Text(
-            '$room subtotal: '
-            '${formatAmount(byRoom[room]!.fold<double>(0, (s, a) => s + a.price))}',
+            l10n.reportSubtotal(
+              l10n.roomLabel(room),
+              formatAmount(
+                byRoom[room]!.fold<double>(0, (s, a) => s + a.price),
+              ),
+            ),
             style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
           ),
         ),
@@ -284,17 +309,19 @@ class PDFService {
     String Function(double) formatAmount,
     Map<String, Uint8List> images,
     Map<String, List<ServiceRecord>> serviceHistory,
+    AppLocalizations l10n,
   ) {
     if (assets.isEmpty) return [];
 
     return [
-      pw.Header(level: 1, text: 'Item detail'),
+      pw.Header(level: 1, text: l10n.reportItemDetail),
       for (final asset in assets)
         _itemBlock(
           asset,
           formatAmount,
           images,
           serviceHistory[asset.id] ?? const [],
+          l10n,
         ),
     ];
   }
@@ -304,6 +331,7 @@ class PDFService {
     String Function(double) formatAmount,
     Map<String, Uint8List> images,
     List<ServiceRecord> history,
+    AppLocalizations l10n,
   ) {
     final photos =
         asset.photoPaths
@@ -314,18 +342,24 @@ class PDFService {
     final receipt = images[asset.receiptPath];
 
     final facts = <List<String>>[
-      ['Room', asset.room],
-      ['Category', asset.category],
-      if ((asset.brand ?? '').isNotEmpty) ['Brand', asset.brand!],
-      if ((asset.model ?? '').isNotEmpty) ['Model', asset.model!],
+      [l10n.room, l10n.roomLabel(asset.room)],
+      [l10n.category, l10n.categoryLabel(asset.category)],
+      if ((asset.brand ?? '').isNotEmpty) [l10n.brand, asset.brand!],
+      if ((asset.model ?? '').isNotEmpty) [l10n.model, asset.model!],
       if ((asset.serialNumber ?? '').isNotEmpty)
-        ['Serial number', asset.serialNumber!],
-      if ((asset.barcode ?? '').isNotEmpty) ['Barcode', asset.barcode!],
-      ['Purchased', DateFormat.yMMMd().format(asset.purchaseDate)],
-      ['Purchase price', formatAmount(asset.price)],
-      ['Estimated value today', formatAmount(Depreciation.currentValue(asset))],
+        [l10n.serialNumber, asset.serialNumber!],
+      if ((asset.barcode ?? '').isNotEmpty) [l10n.barcode, asset.barcode!],
+      [l10n.reportColPurchased, DateFormat.yMMMd(l10n.localeName).format(asset.purchaseDate)],
+      [l10n.reportPurchasePrice, formatAmount(asset.price)],
+      [
+        l10n.reportEstimatedToday,
+        formatAmount(Depreciation.currentValue(asset)),
+      ],
       if (asset.warrantyExpiry != null)
-        ['Warranty until', DateFormat.yMMMd().format(asset.warrantyExpiry!)],
+        [
+          l10n.reportWarrantyUntil,
+          DateFormat.yMMMd(l10n.localeName).format(asset.warrantyExpiry!),
+        ],
     ];
 
     return pw.Container(
@@ -408,12 +442,12 @@ class PDFService {
           ),
           if (history.isNotEmpty) ...[
             pw.SizedBox(height: 8),
-            _serviceHistoryBlock(history, formatAmount),
+            _serviceHistoryBlock(history, formatAmount, l10n),
           ],
           if (receipt != null) ...[
             pw.SizedBox(height: 8),
             pw.Text(
-              'Receipt',
+              l10n.receipt,
               style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
             ),
             pw.SizedBox(height: 4),
@@ -437,6 +471,7 @@ class PDFService {
   pw.Widget _serviceHistoryBlock(
     List<ServiceRecord> history,
     String Function(double) formatAmount,
+    AppLocalizations l10n,
   ) {
     final total = history.fold<double>(0, (sum, r) => sum + r.cost);
 
@@ -444,7 +479,7 @@ class PDFService {
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.Text(
-          'Service history',
+          l10n.reportServiceHistory,
           style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
         ),
         pw.SizedBox(height: 3),
@@ -456,14 +491,14 @@ class PDFService {
                 pw.SizedBox(
                   width: 60,
                   child: pw.Text(
-                    DateFormat.yMd().format(record.date),
+                    DateFormat.yMd(l10n.localeName).format(record.date),
                     style: const pw.TextStyle(fontSize: 8),
                   ),
                 ),
                 pw.Expanded(
                   child: pw.Text(
                     [
-                      record.kind.label,
+                      l10n.serviceKindLabel(record.kind),
                       if ((record.description ?? '').isNotEmpty)
                         record.description!,
                       if ((record.provider ?? '').isNotEmpty) record.provider!,
@@ -480,7 +515,7 @@ class PDFService {
           ),
         pw.SizedBox(height: 2),
         pw.Text(
-          'Spent on this item to date: ${formatAmount(total)}',
+          l10n.reportSpentToDate(formatAmount(total)),
           style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
         ),
       ],
@@ -489,21 +524,22 @@ class PDFService {
 
   // --- Closing blocks ------------------------------------------------------
 
-  List<pw.Widget> _declarationBlock(DateTime generatedAt) {
+  List<pw.Widget> _declarationBlock(
+    DateTime generatedAt,
+    AppLocalizations l10n,
+  ) {
     return [
-      pw.Header(level: 1, text: 'Declaration'),
+      pw.Header(level: 1, text: l10n.reportDeclaration),
       pw.Text(
-        'I confirm that the items listed in this report were owned by me on '
-        '${DateFormat.yMMMMd().format(generatedAt)}, and that the details and '
-        'photographs given are accurate to the best of my knowledge.',
+        l10n.reportDeclarationBody(DateFormat.yMMMMd(l10n.localeName).format(generatedAt)),
         style: const pw.TextStyle(fontSize: 10),
       ),
       pw.SizedBox(height: 32),
       pw.Row(
         children: [
-          pw.Expanded(child: _signatureLine('Signature')),
+          pw.Expanded(child: _signatureLine(l10n.reportSignature)),
           pw.SizedBox(width: 32),
-          pw.Expanded(child: _signatureLine('Date')),
+          pw.Expanded(child: _signatureLine(l10n.reportDate)),
         ],
       ),
     ];
@@ -528,7 +564,7 @@ class PDFService {
     );
   }
 
-  pw.Widget _upgradeNotice() {
+  pw.Widget _upgradeNotice(AppLocalizations l10n) {
     return pw.Container(
       padding: const pw.EdgeInsets.all(12),
       decoration: pw.BoxDecoration(
@@ -538,15 +574,12 @@ class PDFService {
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.Text(
-            'This is the summary report.',
+            l10n.reportSummaryNotice,
             style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 4),
           pw.Text(
-            'Itemize Pro adds a page for every item with its photographs, '
-            'serial number, receipt, service history and estimated current '
-            'value, plus a signed declaration — the form an insurer asks for '
-            'when you claim.',
+            l10n.reportSummaryNoticeBody,
             style: const pw.TextStyle(fontSize: 10),
           ),
         ],
@@ -554,16 +587,21 @@ class PDFService {
     );
   }
 
-  pw.Widget _footer(pw.Context context, bool isPro, DateTime generatedAt) {
+  pw.Widget _footer(
+    pw.Context context,
+    bool isPro,
+    DateTime generatedAt,
+    AppLocalizations l10n,
+  ) {
     return pw.Container(
       alignment: pw.Alignment.centerRight,
       margin: const pw.EdgeInsets.only(top: 8),
       child: pw.Text(
         isPro
-            ? 'Itemize · ${DateFormat.yMd().format(generatedAt)} · '
-                'Page ${context.pageNumber} of ${context.pagesCount}'
-            : 'Generated by Itemize Free · '
-                'Page ${context.pageNumber} of ${context.pagesCount}',
+            ? 'Itemize · ${DateFormat.yMd(l10n.localeName).format(generatedAt)} · '
+                '${l10n.reportPageOf(context.pageNumber, context.pagesCount)}'
+            : '${l10n.reportFooterFree} · '
+                '${l10n.reportPageOf(context.pageNumber, context.pagesCount)}',
         style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey),
       ),
     );

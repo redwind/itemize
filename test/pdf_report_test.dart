@@ -2,7 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 import 'package:itemize/core/utils/pdf_service.dart';
+import 'package:itemize/l10n/app_localizations_en.dart';
+import 'package:itemize/l10n/app_localizations_fr.dart';
 import 'package:itemize/data/models/asset.dart';
 
 Asset asset({
@@ -31,11 +35,17 @@ String money(double v) => '\$${v.toStringAsFixed(2)}';
 void main() {
   // rootBundle needs a binding before the report can load its fonts.
   TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(initializeDateFormatting);
 
   final service = PDFService();
 
   Future<List<int>> build(List<Asset> assets, {required bool isPro}) =>
-      service.generateAssetsReport(assets, money, isPro: isPro);
+      service.generateAssetsReport(
+        assets,
+        money,
+        l10n: AppLocalizationsEn(),
+        isPro: isPro,
+      );
 
   test('produces a structurally valid PDF', () async {
     final bytes = await build([asset(id: 'a')], isPro: true);
@@ -125,5 +135,36 @@ void main() {
       asset(id: 'a', category: kUncategorized),
     ], isPro: true);
     expect(bytes, isNotEmpty);
+  });
+
+  test('the report is written in the language the app is set to', () async {
+    // A claim submitted to a French insurer has to read in French, so the
+    // document follows the interface rather than staying English.
+    final assets = [asset(id: 'a')];
+
+    final english = await service.generateAssetsReport(
+      assets,
+      money,
+      l10n: AppLocalizationsEn(),
+      isPro: true,
+    );
+    final french = await service.generateAssetsReport(
+      assets,
+      money,
+      l10n: AppLocalizationsFr(),
+      isPro: true,
+    );
+
+    expect(french, isNot(equals(english)));
+    expect(utf8.decode(french.take(5).toList()), '%PDF-');
+  });
+
+  test('dates in the report follow the report language, not the process', () {
+    // A French report dated "July 28, 2026" is worse than one wholly in
+    // either language, and that is what reading Intl.defaultLocale gave.
+    final march = DateTime(2024, 3, 1);
+    expect(DateFormat.yMMMMd('fr').format(march), contains('mars'));
+    expect(DateFormat.yMMMMd('de').format(march), contains('März'));
+    expect(DateFormat.yMMMMd('en').format(march), contains('March'));
   });
 }

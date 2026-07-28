@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:itemize/core/theme/app_theme.dart';
 import 'package:itemize/core/utils/auth_service.dart';
+import 'package:itemize/l10n/app_localizations.dart';
 
 class BiometricLockScreen extends StatefulWidget {
   final VoidCallback onUnlock;
@@ -56,6 +57,8 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -70,18 +73,21 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
                 color: AppTheme.primaryBlue,
               ),
               const SizedBox(height: 24),
-              const Text(
-                'Itemize Locked',
-                style: TextStyle(
+              Text(
+                l10n.appLocked,
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.textPrimary,
                 ),
               ),
               const SizedBox(height: 12),
-              const Text(
-                'Please authenticate to continue',
-                style: TextStyle(fontSize: 16, color: AppTheme.textSecondary),
+              Text(
+                l10n.authToContinue,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: AppTheme.textSecondary,
+                ),
               ),
               const SizedBox(height: 48),
               if (_isAuthenticating)
@@ -90,7 +96,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
                 ElevatedButton.icon(
                   onPressed: _authenticate,
                   icon: const Icon(Icons.fingerprint),
-                  label: const Text('Unlock'),
+                  label: Text(l10n.unlock),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 32,

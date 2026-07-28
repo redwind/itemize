@@ -46,6 +46,7 @@ class _MainScreenState extends State<MainScreen> {
   /// findable at all — on a long-press nobody would ever discover it, and it is
   /// the flow that decides whether a new user gets past their first ten items.
   void _onAddPressed() {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet<void>(
       context: context,
       builder:
@@ -55,8 +56,8 @@ class _MainScreenState extends State<MainScreen> {
               children: [
                 ListTile(
                   leading: const Icon(Icons.add),
-                  title: const Text('Add One Item'),
-                  subtitle: const Text('With all its details'),
+                  title: Text(l10n.addOneItem),
+                  subtitle: Text(l10n.addOneItemHint),
                   onTap: () {
                     Navigator.pop(sheetContext);
                     _openSingleItem();
@@ -64,10 +65,8 @@ class _MainScreenState extends State<MainScreen> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.burst_mode),
-                  title: const Text('Quick Capture a Room'),
-                  subtitle: const Text(
-                    'Photograph everything, name it afterwards',
-                  ),
+                  title: Text(l10n.quickCaptureRoom),
+                  subtitle: Text(l10n.quickCaptureRoomHint),
                   onTap: () {
                     Navigator.pop(sheetContext);
                     Navigator.of(context).push(
@@ -109,7 +108,7 @@ class _MainScreenState extends State<MainScreen> {
           ),
           BottomNavigationBarItem(
             icon: const Icon(CupertinoIcons.shield),
-            label: 'Care',
+            label: l10n.careTab,
           ),
           BottomNavigationBarItem(
             icon: const Icon(CupertinoIcons.settings),

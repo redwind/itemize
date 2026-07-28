@@ -4,6 +4,8 @@ import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/data/models/maintenance_schedule.dart';
 import 'package:itemize/data/models/service_record.dart';
 import 'package:uuid/uuid.dart';
+import 'package:itemize/l10n/app_localizations.dart';
+import 'package:itemize/l10n/domain_labels.dart';
 
 /// Records work done on an item, returning null if nothing was saved.
 Future<ServiceRecord?> showServiceEditor(
@@ -99,6 +101,8 @@ class _ServiceEditorState extends State<_ServiceEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -106,16 +110,19 @@ class _ServiceEditorState extends State<_ServiceEditor> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Log work done',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              l10n.logWorkDone,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 16),
 
             SegmentedButton<ServiceKind>(
               segments: [
                 for (final kind in ServiceKind.values)
-                  ButtonSegment(value: kind, label: Text(kind.label)),
+                  ButtonSegment(value: kind, label: Text(l10n.serviceKindLabel(kind))),
               ],
               selected: {_kind},
               onSelectionChanged: (s) => setState(() => _kind = s.first),
@@ -125,9 +132,9 @@ class _ServiceEditorState extends State<_ServiceEditor> {
             TextField(
               controller: _description,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                labelText: 'What was done',
-                hintText: 'Replaced the pump',
+              decoration: InputDecoration(
+                labelText: l10n.whatWasDone,
+                hintText: l10n.whatWasDoneHint,
               ),
             ),
             const SizedBox(height: 12),
@@ -141,7 +148,7 @@ class _ServiceEditorState extends State<_ServiceEditor> {
                       decimal: true,
                     ),
                     decoration: InputDecoration(
-                      labelText: 'Cost',
+                      labelText: l10n.cost,
                       prefixText: widget.currencySymbol,
                       // Free work is still worth recording, and leaving this
                       // blank should not feel like an omission.
@@ -154,7 +161,7 @@ class _ServiceEditorState extends State<_ServiceEditor> {
                   child: TextField(
                     controller: _provider,
                     textCapitalization: TextCapitalization.words,
-                    decoration: const InputDecoration(labelText: 'Who did it'),
+                    decoration: InputDecoration(labelText: l10n.whoDidIt),
                   ),
                 ),
               ],
@@ -164,7 +171,7 @@ class _ServiceEditorState extends State<_ServiceEditor> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.calendar_today),
-              title: const Text('When'),
+              title: Text(l10n.when),
               subtitle: Text(DateFormat.yMMMd().format(_date)),
               onTap: () async {
                 final picked = await showDatePicker(
@@ -181,12 +188,12 @@ class _ServiceEditorState extends State<_ServiceEditor> {
               DropdownButtonFormField<String?>(
                 initialValue: _scheduleId,
                 isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Satisfies which job',
-                  helperText: 'Marks that job as done and moves its next date',
+                decoration: InputDecoration(
+                  labelText: l10n.satisfiesWhichJob,
+                  helperText: l10n.satisfiesWhichJobHint,
                 ),
                 items: [
-                  const DropdownMenuItem(value: null, child: Text('None')),
+                  DropdownMenuItem(value: null, child: Text(l10n.none)),
                   for (final schedule in widget.schedules)
                     DropdownMenuItem(
                       value: schedule.id,
@@ -205,7 +212,7 @@ class _ServiceEditorState extends State<_ServiceEditor> {
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: const Text('Save'),
+                child: Text(l10n.save),
               ),
             ),
           ],

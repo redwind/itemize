@@ -8,6 +8,8 @@ import 'package:itemize/core/utils/catalog_image.dart';
 import 'package:itemize/core/utils/image_storage.dart';
 import 'package:itemize/core/utils/ocr_service.dart';
 import 'package:itemize/data/models/asset.dart';
+import 'package:itemize/l10n/app_localizations.dart';
+import 'package:itemize/l10n/domain_labels.dart';
 import 'package:itemize/providers/asset_provider.dart';
 import 'package:itemize/providers/settings_provider.dart';
 import 'package:itemize/ui/add_item/asset_library_screen.dart';
@@ -106,6 +108,7 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
   // --- Photos -------------------------------------------------------------
 
   Future<_PhotoAction?> _choosePhotoSource() {
+    final l10n = AppLocalizations.of(context)!;
     return showModalBottomSheet<_PhotoAction>(
       context: context,
       builder:
@@ -115,19 +118,19 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
               children: [
                 ListTile(
                   leading: const Icon(Icons.photo_camera_outlined),
-                  title: const Text('Take Photo'),
+                  title: Text(l10n.takePhoto),
                   onTap: () => Navigator.pop(sheetContext, _PhotoAction.camera),
                 ),
                 ListTile(
                   leading: const Icon(Icons.photo_library_outlined),
-                  title: const Text('Choose from Photos'),
+                  title: Text(l10n.chooseFromPhotos),
                   onTap:
                       () => Navigator.pop(sheetContext, _PhotoAction.gallery),
                 ),
                 ListTile(
                   leading: const Icon(Icons.category_outlined),
-                  title: const Text('Pick a Stock Image'),
-                  subtitle: const Text('Chairs, tables, appliances and more'),
+                  title: Text(l10n.pickStockImage),
+                  subtitle: Text(l10n.pickStockImageHint),
                   onTap:
                       () => Navigator.pop(sheetContext, _PhotoAction.catalog),
                 ),
@@ -138,6 +141,7 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
   }
 
   Future<void> _addPhoto() async {
+    final l10n = AppLocalizations.of(context)!;
     final action = await _choosePhotoSource();
     if (action == null) return;
 
@@ -157,7 +161,7 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
         // Naming the item is the next thing they'd do anyway, so offer the
         // catalog label -- but never overwrite something already typed.
         if (_nameController.text.trim().isEmpty) {
-          _nameController.text = picked.label;
+          _nameController.text = l10n.catalogLabel(picked.labelKey);
         }
       });
       return;
@@ -179,6 +183,7 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
   }
 
   Future<void> _tapPhoto(int index) async {
+    final l10n = AppLocalizations.of(context)!;
     final isCover = index == 0;
     final action = await showModalBottomSheet<_PhotoTap>(
       context: context,
@@ -190,14 +195,14 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
                 if (!isCover)
                   ListTile(
                     leading: const Icon(Icons.star_outline),
-                    title: const Text('Make Cover Photo'),
-                    subtitle: const Text('Shown in lists and reports'),
+                    title: Text(l10n.makeCoverPhoto),
+                    subtitle: Text(l10n.makeCoverPhotoHint),
                     onTap:
                         () => Navigator.pop(sheetContext, _PhotoTap.makeCover),
                   ),
                 ListTile(
                   leading: const Icon(Icons.delete_outline),
-                  title: const Text('Remove Photo'),
+                  title: Text(l10n.removePhoto),
                   onTap: () => Navigator.pop(sheetContext, _PhotoTap.remove),
                 ),
               ],
@@ -237,6 +242,7 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
       _imagePicker.pickImage(source: ImageSource.camera);
 
   Future<void> _scanBarcode() async {
+    final l10n = AppLocalizations.of(context)!;
     final image = await _startScan();
     if (image == null || !mounted) return;
 
@@ -247,14 +253,14 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
       if (!mounted) return;
 
       if (barcode == null) {
-        _showSnack("No barcode found");
+        _showSnack(l10n.noBarcodeFound);
         return;
       }
 
       _barcodeController.text = barcode;
-      _showSnack("Barcode saved: $barcode");
+      _showSnack(l10n.barcodeSaved(barcode));
     } catch (e) {
-      if (mounted) _showSnack("Error: $e");
+      if (mounted) _showSnack(l10n.genericError('$e'));
     } finally {
       if (mounted) setState(() => _isProcessingAI = false);
     }
@@ -262,6 +268,7 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
 
   /// Reads the rating plate and fills in what it says.
   Future<void> _scanNameplate() async {
+    final l10n = AppLocalizations.of(context)!;
     final image = await _startScan();
     if (image == null || !mounted) return;
 
@@ -272,9 +279,7 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
       if (!mounted) return;
 
       if (info.isEmpty) {
-        _showSnack(
-          "Nothing readable on that label. Try filling the frame with it.",
-        );
+        _showSnack(l10n.nameplateUnreadable);
         return;
       }
 
@@ -291,18 +296,16 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
       fill(_serialController, info.serialNumber);
       setState(() {});
 
-      _showSnack(
-        "Read ${info.fieldCount} field${info.fieldCount == 1 ? '' : 's'}. "
-        "Please check them against the label.",
-      );
+      _showSnack(l10n.nameplateRead(info.fieldCount));
     } catch (e) {
-      if (mounted) _showSnack("Error: $e");
+      if (mounted) _showSnack(l10n.genericError('$e'));
     } finally {
       if (mounted) setState(() => _isProcessingAI = false);
     }
   }
 
   Future<void> _scanReceipt() async {
+    final l10n = AppLocalizations.of(context)!;
     final image = await _startScan();
     if (image == null || !mounted) return;
 
@@ -327,9 +330,9 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
         if (scannedDate != null) _purchaseDate = scannedDate;
       });
 
-      _showSnack("Receipt scanned. Please check the details.");
+      _showSnack(l10n.receiptScanned);
     } catch (e) {
-      if (mounted) _showSnack("Error: $e");
+      if (mounted) _showSnack(l10n.genericError('$e'));
     } finally {
       if (mounted) setState(() => _isProcessingAI = false);
     }
@@ -338,10 +341,11 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
   // --- Saving -------------------------------------------------------------
 
   Future<void> _saveAsset() async {
+    final l10n = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) return;
 
     if (_category == kUncategorized) {
-      _showSnack("Please choose a category.");
+      _showSnack(l10n.chooseCategory);
       return;
     }
 
@@ -400,6 +404,7 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
   }
 
   void _showSmartScanOptions() {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       builder:
@@ -409,10 +414,8 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
               children: [
                 ListTile(
                   leading: const Icon(Icons.label_important_outline),
-                  title: const Text('Scan Label / Nameplate'),
-                  subtitle: const Text(
-                    'Reads the brand, model and serial number',
-                  ),
+                  title: Text(l10n.scanNameplate),
+                  subtitle: Text(l10n.scanNameplateHint),
                   onTap: () {
                     Navigator.pop(ctx);
                     _scanNameplate();
@@ -420,8 +423,8 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.receipt),
-                  title: const Text('Scan Receipt'),
-                  subtitle: const Text('Fills in the price and purchase date'),
+                  title: Text(l10n.scanReceipt),
+                  subtitle: Text(l10n.scanReceiptHint),
                   onTap: () {
                     Navigator.pop(ctx);
                     _scanReceipt();
@@ -429,8 +432,8 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.qr_code),
-                  title: const Text('Scan Barcode'),
-                  subtitle: const Text('Records the product code'),
+                  title: Text(l10n.scanBarcode),
+                  subtitle: Text(l10n.scanBarcodeHint),
                   onTap: () {
                     Navigator.pop(ctx);
                     _scanBarcode();
@@ -447,10 +450,11 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Asset' : 'Add New Asset'),
+        title: Text(_isEditing ? l10n.editItemTitle : l10n.addItemTitle),
         actions: [
           IconButton(icon: const Icon(Icons.check), onPressed: _saveAsset),
         ],
@@ -465,13 +469,13 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _buildPhotoSection(),
+                      _buildPhotoSection(l10n),
                       const SizedBox(height: 16),
 
                       ElevatedButton.icon(
                         onPressed: _showSmartScanOptions,
                         icon: const Icon(Icons.auto_awesome),
-                        label: const Text('Smart Scan'),
+                        label: Text(l10n.smartScan),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.purple,
                         ),
@@ -481,14 +485,14 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
                       TextFormField(
                         controller: _nameController,
                         textCapitalization: TextCapitalization.sentences,
-                        decoration: const InputDecoration(
-                          labelText: 'Item Name',
-                          prefixIcon: Icon(Icons.label),
+                        decoration: InputDecoration(
+                          labelText: l10n.itemName,
+                          prefixIcon: const Icon(Icons.label),
                         ),
                         validator:
                             (v) =>
                                 (v == null || v.trim().isEmpty)
-                                    ? 'Name is required'
+                                    ? l10n.nameRequired
                                     : null,
                       ),
                       const SizedBox(height: 12),
@@ -503,22 +507,22 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
                                     decimal: true,
                                   ),
                               decoration: InputDecoration(
-                                labelText: 'Price',
+                                labelText: l10n.price,
                                 prefixText: settings.currencySymbol,
                                 prefixStyle: const TextStyle(fontSize: 16),
                               ),
                               validator:
                                   (v) =>
                                       (v == null || v.isEmpty)
-                                          ? 'Required'
+                                          ? l10n.fieldRequired
                                           : null,
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: InputDecorator(
-                              decoration: const InputDecoration(
-                                labelText: 'Currency',
+                              decoration: InputDecoration(
+                                labelText: l10n.currency,
                               ),
                               child: Text(
                                 settings.currencyCode,
@@ -541,15 +545,15 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
                                       .map(
                                         (r) => DropdownMenuItem(
                                           value: r,
-                                          child: Text(r),
+                                          child: Text(l10n.roomLabel(r)),
                                         ),
                                       )
                                       .toList(),
                               onChanged:
                                   (v) => setState(() => _room = v ?? _room),
-                              decoration: const InputDecoration(
-                                labelText: 'Room',
-                                prefixIcon: Icon(Icons.meeting_room),
+                              decoration: InputDecoration(
+                                labelText: l10n.room,
+                                prefixIcon: const Icon(Icons.meeting_room),
                               ),
                             ),
                           ),
@@ -563,17 +567,19 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
                                 // actually is; saving with it selected is
                                 // refused, so it cannot become a resting state.
                                 if (_category == kUncategorized)
-                                  const DropdownMenuItem(
+                                  DropdownMenuItem(
                                     value: kUncategorized,
                                     child: Text(
-                                      kUncategorized,
-                                      style: TextStyle(color: Colors.grey),
+                                      l10n.uncategorized,
+                                      style: const TextStyle(
+                                        color: Colors.grey,
+                                      ),
                                     ),
                                   ),
                                 ...kAssetCategories.map(
                                   (c) => DropdownMenuItem(
                                     value: c,
-                                    child: Text(c),
+                                    child: Text(l10n.categoryLabel(c)),
                                   ),
                                 ),
                               ],
@@ -581,9 +587,9 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
                                   (v) => setState(
                                     () => _category = v ?? _category,
                                   ),
-                              decoration: const InputDecoration(
-                                labelText: 'Category',
-                                prefixIcon: Icon(Icons.category),
+                              decoration: InputDecoration(
+                                labelText: l10n.category,
+                                prefixIcon: const Icon(Icons.category),
                               ),
                             ),
                           ),
@@ -592,8 +598,8 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
                       const SizedBox(height: 24),
 
                       _buildSectionLabel(
-                        'Identification',
-                        'What an insurer asks for to prove which unit you owned.',
+                        l10n.identification,
+                        l10n.identificationHint,
                       ),
                       const SizedBox(height: 12),
 
@@ -603,9 +609,9 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
                             child: TextFormField(
                               controller: _brandController,
                               textCapitalization: TextCapitalization.words,
-                              decoration: const InputDecoration(
-                                labelText: 'Brand',
-                                prefixIcon: Icon(Icons.storefront),
+                              decoration: InputDecoration(
+                                labelText: l10n.brand,
+                                prefixIcon: const Icon(Icons.storefront),
                               ),
                             ),
                           ),
@@ -613,8 +619,8 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
                           Expanded(
                             child: TextFormField(
                               controller: _modelController,
-                              decoration: const InputDecoration(
-                                labelText: 'Model',
+                              decoration: InputDecoration(
+                                labelText: l10n.model,
                               ),
                             ),
                           ),
@@ -624,29 +630,29 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
 
                       TextFormField(
                         controller: _serialController,
-                        decoration: const InputDecoration(
-                          labelText: 'Serial Number',
-                          prefixIcon: Icon(Icons.pin),
+                        decoration: InputDecoration(
+                          labelText: l10n.serialNumber,
+                          prefixIcon: const Icon(Icons.pin),
                         ),
                       ),
                       const SizedBox(height: 12),
 
                       TextFormField(
                         controller: _barcodeController,
-                        decoration: const InputDecoration(
-                          labelText: 'Barcode',
-                          prefixIcon: Icon(Icons.qr_code),
+                        decoration: InputDecoration(
+                          labelText: l10n.barcode,
+                          prefixIcon: const Icon(Icons.qr_code),
                         ),
                       ),
                       const SizedBox(height: 24),
 
-                      _buildSectionLabel('Purchase', null),
+                      _buildSectionLabel(l10n.purchase, null),
                       const SizedBox(height: 4),
 
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: const Icon(Icons.calendar_today),
-                        title: const Text('Purchase Date'),
+                        title: Text(l10n.purchaseDate),
                         subtitle: Text(
                           DateFormat.yMMMd().format(_purchaseDate),
                         ),
@@ -663,10 +669,10 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: const Icon(Icons.security),
-                        title: const Text('Warranty Expiry'),
+                        title: Text(l10n.warrantyExpiry),
                         subtitle: Text(
                           _warrantyExpiry == null
-                              ? 'Not set'
+                              ? l10n.notSet
                               : DateFormat.yMMMd().format(_warrantyExpiry!),
                         ),
                         trailing:
@@ -691,23 +697,23 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
                           if (d != null) setState(() => _warrantyExpiry = d);
                         },
                       ),
-                      _buildReceiptTile(),
+                      _buildReceiptTile(l10n),
                       const SizedBox(height: 12),
 
                       TextFormField(
                         controller: _notesController,
                         textCapitalization: TextCapitalization.sentences,
                         maxLines: 3,
-                        decoration: const InputDecoration(
-                          labelText: 'Notes',
+                        decoration: InputDecoration(
+                          labelText: l10n.notes,
                           alignLabelWithHint: true,
-                          hintText: 'Condition, where it was bought, extras...',
+                          hintText: l10n.notesHint,
                         ),
                       ),
 
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('Mark as Favorite'),
+                        title: Text(l10n.markAsFavorite),
                         value: _isFavorite,
                         onChanged: (v) => setState(() => _isFavorite = v),
                       ),
@@ -745,7 +751,7 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
     );
   }
 
-  Widget _buildPhotoSection() {
+  Widget _buildPhotoSection(AppLocalizations l10n) {
     const double tileSize = 104;
 
     return Column(
@@ -759,24 +765,24 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
             separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
               if (index == _photoPaths.length) {
-                return _buildAddPhotoTile(tileSize);
+                return _buildAddPhotoTile(tileSize, l10n);
               }
-              return _buildPhotoTile(index, tileSize);
+              return _buildPhotoTile(index, tileSize, l10n);
             },
           ),
         ),
         const SizedBox(height: 8),
         Text(
           _photoPaths.isEmpty
-              ? 'Add photos — the first one becomes the cover.'
-              : '${_photoPaths.length} photo${_photoPaths.length == 1 ? '' : 's'}. Tap one to remove it or make it the cover.',
+              ? l10n.photosEmptyHint
+              : l10n.photosCount(_photoPaths.length),
           style: const TextStyle(fontSize: 12, color: Colors.grey),
         ),
       ],
     );
   }
 
-  Widget _buildAddPhotoTile(double size) {
+  Widget _buildAddPhotoTile(double size, AppLocalizations l10n) {
     return GestureDetector(
       onTap: _addPhoto,
       child: Container(
@@ -786,14 +792,14 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
           color: Colors.grey[200],
           borderRadius: BorderRadius.circular(16),
         ),
-        child: const Column(
+        child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add_a_photo, color: Colors.grey),
-            SizedBox(height: 4),
+            const Icon(Icons.add_a_photo, color: Colors.grey),
+            const SizedBox(height: 4),
             Text(
-              'Add Photo',
-              style: TextStyle(color: Colors.grey, fontSize: 11),
+              l10n.addPhoto,
+              style: const TextStyle(color: Colors.grey, fontSize: 11),
             ),
           ],
         ),
@@ -801,7 +807,7 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
     );
   }
 
-  Widget _buildPhotoTile(int index, double size) {
+  Widget _buildPhotoTile(int index, double size, AppLocalizations l10n) {
     final file = ImageStorage.resolve(_photoPaths[index]);
 
     return GestureDetector(
@@ -837,9 +843,9 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
                   color: Colors.black54,
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Text(
-                  'Cover',
-                  style: TextStyle(color: Colors.white, fontSize: 10),
+                child: Text(
+                  l10n.coverBadge,
+                  style: const TextStyle(color: Colors.white, fontSize: 10),
                 ),
               ),
             ),
@@ -848,7 +854,7 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
     );
   }
 
-  Widget _buildReceiptTile() {
+  Widget _buildReceiptTile(AppLocalizations l10n) {
     final attached = _receiptPath != null;
 
     return ListTile(
@@ -857,8 +863,8 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
         Icons.receipt_long,
         color: attached ? Colors.green : Colors.grey,
       ),
-      title: const Text('Receipt'),
-      subtitle: Text(attached ? 'Attached' : 'Proof of purchase for a claim'),
+      title: Text(l10n.receipt),
+      subtitle: Text(attached ? l10n.receiptAttached : l10n.receiptHint),
       trailing:
           attached
               ? IconButton(

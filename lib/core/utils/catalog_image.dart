@@ -61,7 +61,7 @@ class CatalogImage {
     image.dispose();
 
     if (bytes == null) {
-      throw StateError('Could not encode catalog image for ${item.label}');
+      throw StateError('Could not encode catalog image for ${item.labelKey}');
     }
 
     return ImageStorage.saveBytes(bytes.buffer.asUint8List());

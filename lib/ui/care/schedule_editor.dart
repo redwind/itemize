@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/data/models/maintenance_schedule.dart';
 import 'package:uuid/uuid.dart';
+import 'package:itemize/l10n/app_localizations.dart';
+import 'package:itemize/l10n/domain_labels.dart';
 
 /// Creates or edits one recurring job, returning null if nothing was saved.
 Future<MaintenanceSchedule?> showScheduleEditor(
@@ -58,12 +60,15 @@ class _ScheduleEditorState extends State<_ScheduleEditor> {
   /// The blank form is what stops people using a feature like this at all —
   /// nobody sits down to invent a servicing schedule from nothing. Offering
   /// three plausible ones turns it into a tap.
-  List<({String title, int months, bool warranty})> get _suggestions =>
+  List<({String titleKey, int months, bool warranty})> get _suggestions =>
       kSuggestedMaintenance[widget.asset.category] ?? const [];
 
-  void _apply(({String title, int months, bool warranty}) suggestion) {
+  void _apply(
+    AppLocalizations l10n,
+    ({String titleKey, int months, bool warranty}) suggestion,
+  ) {
     setState(() {
-      _title.text = suggestion.title;
+      _title.text = l10n.jobLabel(suggestion.titleKey);
       _intervalMonths = suggestion.months;
       _requiredForWarranty = suggestion.warranty;
     });
@@ -92,6 +97,8 @@ class _ScheduleEditorState extends State<_ScheduleEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -100,7 +107,7 @@ class _ScheduleEditorState extends State<_ScheduleEditor> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              _isEditing ? 'Edit job' : 'New job',
+              _isEditing ? l10n.editJob : l10n.newJob,
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -109,9 +116,9 @@ class _ScheduleEditorState extends State<_ScheduleEditor> {
             const SizedBox(height: 16),
 
             if (!_isEditing && _suggestions.isNotEmpty) ...[
-              const Text(
-                'Common for this kind of thing',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+              Text(
+                l10n.commonForThis,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
               const SizedBox(height: 8),
               Wrap(
@@ -120,8 +127,8 @@ class _ScheduleEditorState extends State<_ScheduleEditor> {
                 children: [
                   for (final suggestion in _suggestions)
                     ActionChip(
-                      label: Text(suggestion.title),
-                      onPressed: () => _apply(suggestion),
+                      label: Text(l10n.jobLabel(suggestion.titleKey)),
+                      onPressed: () => _apply(l10n, suggestion),
                     ),
                 ],
               ),
@@ -133,22 +140,25 @@ class _ScheduleEditorState extends State<_ScheduleEditor> {
               autofocus: true,
               textCapitalization: TextCapitalization.sentences,
               onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(
-                labelText: 'What needs doing',
-                hintText: 'Replace water filter',
+              decoration: InputDecoration(
+                labelText: l10n.whatNeedsDoing,
+                hintText: l10n.whatNeedsDoingHint,
               ),
             ),
             const SizedBox(height: 16),
 
             DropdownButtonFormField<int>(
               initialValue:
-                  kMaintenanceIntervals.values.contains(_intervalMonths)
+                  kMaintenanceIntervals.contains(_intervalMonths)
                       ? _intervalMonths
                       : null,
-              decoration: const InputDecoration(labelText: 'How often'),
+              decoration: InputDecoration(labelText: l10n.howOften),
               items: [
-                for (final entry in kMaintenanceIntervals.entries)
-                  DropdownMenuItem(value: entry.value, child: Text(entry.key)),
+                for (final months in kMaintenanceIntervals)
+                  DropdownMenuItem(
+                    value: months,
+                    child: Text(l10n.intervalLabel(months)),
+                  ),
               ],
               onChanged:
                   (v) => setState(() => _intervalMonths = v ?? _intervalMonths),
@@ -157,11 +167,10 @@ class _ScheduleEditorState extends State<_ScheduleEditor> {
 
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Required to keep the warranty valid'),
-              subtitle: const Text(
-                'You will be warned if this lapses while the item is still '
-                'covered.',
-                style: TextStyle(fontSize: 12),
+              title: Text(l10n.requiredForWarranty),
+              subtitle: Text(
+                l10n.requiredForWarrantyHint,
+                style: const TextStyle(fontSize: 12),
               ),
               value: _requiredForWarranty,
               onChanged: (v) => setState(() => _requiredForWarranty = v),
@@ -175,7 +184,7 @@ class _ScheduleEditorState extends State<_ScheduleEditor> {
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: Text(_isEditing ? 'Save' : 'Add job'),
+                child: Text(_isEditing ? l10n.save : l10n.addJob),
               ),
             ),
           ],

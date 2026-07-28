@@ -7,6 +7,7 @@ import 'package:itemize/providers/asset_provider.dart';
 import 'package:itemize/providers/settings_provider.dart';
 import 'package:itemize/ui/assets/asset_list_screen.dart';
 import 'package:itemize/l10n/app_localizations.dart';
+import 'package:itemize/l10n/domain_labels.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -24,19 +25,19 @@ class DashboardScreen extends ConsumerWidget {
         child: Column(
           children: [
             _buildTotalValueCard(totalValue, l10n, ref),
-            _buildCoverageWarning(ref),
+            _buildCoverageWarning(ref, l10n),
             const SizedBox(height: 24),
             SizedBox(
               height: 250,
               child: assetsAsync.when(
-                data: (assets) => _buildChart(assets, ref),
+                data: (assets) => _buildChart(assets, ref, l10n),
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error:
-                    (_, __) => const Center(child: Text('Error loading chart')),
+                    (_, __) => Center(child: Text(l10n.errorLoadingChart)),
               ),
             ),
             const SizedBox(height: 24),
-            _buildRoomGrid(context),
+            _buildRoomGrid(context, l10n),
           ],
         ),
       ),
@@ -91,9 +92,9 @@ class DashboardScreen extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Estimated value today',
-                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                Text(
+                  l10n.estimatedValueToday,
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
                 ),
                 Text(
                   settings.formatAmount(depreciation.totalCurrent),
@@ -118,7 +119,7 @@ class DashboardScreen extends ConsumerWidget {
   /// one that has to fit under the limit. Shown only once there is a limit to
   /// compare against, and only when it has actually been passed — a banner that
   /// is always there is a banner nobody reads.
-  Widget _buildCoverageWarning(WidgetRef ref) {
+  Widget _buildCoverageWarning(WidgetRef ref, AppLocalizations l10n) {
     final settings = ref.watch(settingsProvider);
     final depreciation = ref.watch(depreciationProvider);
 
@@ -147,19 +148,19 @@ class DashboardScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'You may be under-insured',
-                  style: TextStyle(
+                Text(
+                  l10n.underInsuredTitle,
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: AppTheme.errorRed,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'What you have recorded is worth about '
-                  '${settings.formatAmount(shortfall)} more than your '
-                  '${settings.formatAmount(settings.coverageLimit)} contents '
-                  'cover. Worth a word with your insurer.',
+                  l10n.underInsuredBody(
+                    settings.formatAmount(shortfall),
+                    settings.formatAmount(settings.coverageLimit),
+                  ),
                   style: const TextStyle(fontSize: 13),
                 ),
               ],
@@ -170,10 +171,14 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildChart(List<dynamic> assets, WidgetRef ref) {
+  Widget _buildChart(
+    List<dynamic> assets,
+    WidgetRef ref,
+    AppLocalizations l10n,
+  ) {
     final settings = ref.watch(settingsProvider);
     if (assets.isEmpty) {
-      return const Center(child: Text('No assets data'));
+      return Center(child: Text(l10n.noAssetsData));
     }
 
     // Grouped by room rather than category: it matches the room grid directly
@@ -243,7 +248,7 @@ class DashboardScreen extends ConsumerWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            e.key,
+                            l10n.roomLabel(e.key),
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
@@ -268,7 +273,7 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildRoomGrid(BuildContext context) {
+  Widget _buildRoomGrid(BuildContext context, AppLocalizations l10n) {
     const rooms = kAssetRooms;
 
     return GridView.builder(
@@ -283,12 +288,12 @@ class DashboardScreen extends ConsumerWidget {
       itemCount: rooms.length,
       itemBuilder: (context, index) {
         final room = rooms[index];
-        return _buildRoomCard(context, room);
+        return _buildRoomCard(context, room, l10n);
       },
     );
   }
 
-  Widget _buildRoomCard(BuildContext context, String room) {
+  Widget _buildRoomCard(BuildContext context, String room, AppLocalizations l10n) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -312,7 +317,7 @@ class DashboardScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              room,
+              l10n.roomLabel(room),
               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
             ),
           ],

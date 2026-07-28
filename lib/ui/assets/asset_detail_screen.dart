@@ -10,6 +10,8 @@ import 'package:itemize/providers/asset_provider.dart';
 import 'package:itemize/providers/settings_provider.dart';
 import 'package:itemize/ui/add_item/add_item_screen.dart';
 import 'package:itemize/ui/care/asset_care_screen.dart';
+import 'package:itemize/l10n/app_localizations.dart';
+import 'package:itemize/l10n/domain_labels.dart';
 
 class AssetDetailScreen extends ConsumerStatefulWidget {
   final Asset asset;
@@ -58,6 +60,7 @@ class _AssetDetailScreenState extends ConsumerState<AssetDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
+    final l10n = AppLocalizations.of(context)!;
     final photos = _currentAsset.photoPaths;
 
     return Scaffold(
@@ -120,7 +123,7 @@ class _AssetDetailScreenState extends ConsumerState<AssetDetailScreen> {
               ),
               IconButton(
                 icon: const Icon(Icons.edit),
-                tooltip: 'Edit',
+                tooltip: l10n.edit,
                 onPressed: _edit,
               ),
               IconButton(
@@ -165,33 +168,35 @@ class _AssetDetailScreenState extends ConsumerState<AssetDetailScreen> {
                       children: [
                         Chip(
                           avatar: const Icon(Icons.meeting_room, size: 16),
-                          label: Text(_currentAsset.room),
+                          label: Text(l10n.roomLabel(_currentAsset.room)),
                           backgroundColor: Colors.grey[200],
                         ),
                         Chip(
                           avatar: const Icon(Icons.category, size: 16),
-                          label: Text(_currentAsset.category),
+                          label: Text(
+                            l10n.categoryLabel(_currentAsset.category),
+                          ),
                           backgroundColor: Colors.grey[200],
                         ),
                       ],
                     ),
                     const SizedBox(height: 24),
 
-                    _buildValueEstimate(settings),
+                    _buildValueEstimate(settings, l10n),
                     const SizedBox(height: 12),
-                    _buildCareLink(),
+                    _buildCareLink(l10n),
                     const SizedBox(height: 24),
 
                     _buildInfoRow(
                       Icons.calendar_today,
-                      'Purchased',
+                      l10n.purchased,
                       DateFormat.yMMMd().format(_currentAsset.purchaseDate),
                     ),
                     if (_currentAsset.warrantyExpiry != null) ...[
                       const SizedBox(height: 16),
                       _buildInfoRow(
                         Icons.security,
-                        'Warranty Expires',
+                        l10n.warrantyExpires,
                         DateFormat.yMMMd().format(
                           _currentAsset.warrantyExpiry!,
                         ),
@@ -200,33 +205,33 @@ class _AssetDetailScreenState extends ConsumerState<AssetDetailScreen> {
                     ],
                     ..._buildOptionalRow(
                       Icons.storefront,
-                      'Brand',
+                      l10n.brand,
                       _currentAsset.brand,
                     ),
                     ..._buildOptionalRow(
                       Icons.devices_other,
-                      'Model',
+                      l10n.model,
                       _currentAsset.model,
                     ),
                     ..._buildOptionalRow(
                       Icons.pin,
-                      'Serial Number',
+                      l10n.serialNumber,
                       _currentAsset.serialNumber,
                     ),
                     ..._buildOptionalRow(
                       Icons.qr_code,
-                      'Barcode',
+                      l10n.barcode,
                       _currentAsset.barcode,
                     ),
                     ..._buildOptionalRow(
                       Icons.notes,
-                      'Notes',
+                      l10n.notes,
                       _currentAsset.notes,
                     ),
 
                     if (_currentAsset.receiptPath != null) ...[
                       const SizedBox(height: 24),
-                      _buildReceipt(),
+                      _buildReceipt(l10n),
                     ],
                     const SizedBox(height: 40),
                   ],
@@ -245,7 +250,7 @@ class _AssetDetailScreenState extends ConsumerState<AssetDetailScreen> {
   /// on a conventional useful life, not any insurer's own schedule, and
   /// presenting it as fact would be the kind of number people quote back at an
   /// adjuster and lose an argument with.
-  Widget _buildValueEstimate(AppSettings settings) {
+  Widget _buildValueEstimate(AppSettings settings, AppLocalizations l10n) {
     final current = Depreciation.currentValue(_currentAsset);
     final depreciates = Depreciation.depreciates(_currentAsset.category);
 
@@ -261,9 +266,9 @@ class _AssetDetailScreenState extends ConsumerState<AssetDetailScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Estimated value today',
-                style: TextStyle(color: Colors.grey, fontSize: 12),
+              Text(
+                l10n.estimatedValueToday,
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
               ),
               Text(
                 settings.formatAmount(current),
@@ -277,8 +282,12 @@ class _AssetDetailScreenState extends ConsumerState<AssetDetailScreen> {
           const SizedBox(height: 4),
           Text(
             depreciates
-                ? 'Straight-line estimate for ${_currentAsset.category}. Your insurer may use a different schedule.'
-                : '${_currentAsset.category} is not depreciated — insurers usually schedule it separately.',
+                ? l10n.valueEstimateDepreciates(
+                  l10n.categoryLabel(_currentAsset.category),
+                )
+                : l10n.valueEstimateHeld(
+                  l10n.categoryLabel(_currentAsset.category),
+                ),
             style: const TextStyle(color: Colors.grey, fontSize: 11),
           ),
         ],
@@ -291,7 +300,7 @@ class _AssetDetailScreenState extends ConsumerState<AssetDetailScreen> {
   /// Summarised rather than expanded here: the detail screen is already long,
   /// and the count of overdue jobs is the only part of it worth reading at a
   /// glance.
-  Widget _buildCareLink() {
+  Widget _buildCareLink(AppLocalizations l10n) {
     final plan = ref.watch(maintenancePlanProvider).valueOrNull ?? const [];
     final mine = plan.where((d) => d.asset.id == _currentAsset.id).toList();
     final overdue = mine.where((d) => d.isOverdue()).length;
@@ -303,12 +312,12 @@ class _AssetDetailScreenState extends ConsumerState<AssetDetailScreen> {
         Icons.build_circle_outlined,
         color: atRisk ? AppTheme.errorRed : AppTheme.primaryBlue,
       ),
-      title: const Text('Care & history'),
+      title: Text(l10n.careAndHistory),
       subtitle: Text(
         switch ((mine.length, overdue)) {
-          (0, _) => 'Add what this needs doing, and log repairs',
-          (_, 0) => '${mine.length} scheduled, nothing overdue',
-          (_, final late) => '$late overdue of ${mine.length} scheduled',
+          (0, _) => l10n.careNothingScheduled,
+          (_, 0) => l10n.careNoneOverdue(mine.length),
+          (_, final late) => l10n.careOverdue(late, mine.length),
         },
         style: TextStyle(
           fontSize: 12,
@@ -369,7 +378,7 @@ class _AssetDetailScreenState extends ConsumerState<AssetDetailScreen> {
     );
   }
 
-  Widget _buildReceipt() {
+  Widget _buildReceipt(AppLocalizations l10n) {
     final file = ImageStorage.resolve(_currentAsset.receiptPath);
     if (file == null) return const SizedBox.shrink();
 
@@ -380,9 +389,9 @@ class _AssetDetailScreenState extends ConsumerState<AssetDetailScreen> {
           children: [
             const Icon(Icons.receipt_long, color: Colors.green),
             const SizedBox(width: 16),
-            const Text(
-              'Receipt',
-              style: TextStyle(color: Colors.grey, fontSize: 12),
+            Text(
+              l10n.receipt,
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
             ),
           ],
         ),
@@ -443,6 +452,7 @@ class _AssetDetailScreenState extends ConsumerState<AssetDetailScreen> {
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
     final repository = ref.read(assetRepositoryProvider);
     final scheduleCount =
         (await repository.schedulesFor(_currentAsset.id)).length;
@@ -454,28 +464,25 @@ class _AssetDetailScreenState extends ConsumerState<AssetDetailScreen> {
       context: context,
       builder:
           (ctx) => AlertDialog(
-            title: Text('Delete ${_currentAsset.name}?'),
+            title: Text(l10n.deleteItemTitle(_currentAsset.name)),
             content: Text(
               // Named, because a service history is the part that cannot be
               // reconstructed from memory and the owner may not have realised
               // it goes too.
               recordCount == 0 && scheduleCount == 0
-                  ? 'You can undo this straight afterwards.'
-                  : 'This also removes $scheduleCount scheduled '
-                      'job${scheduleCount == 1 ? '' : 's'} and $recordCount '
-                      'history entr${recordCount == 1 ? 'y' : 'ies'}. '
-                      'You can undo it straight afterwards.',
+                  ? l10n.deleteItemSimple
+                  : l10n.deleteItemWithHistory(scheduleCount, recordCount),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancel'),
+                child: Text(l10n.cancel),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(ctx, true),
-                child: const Text(
-                  'Delete',
-                  style: TextStyle(color: Colors.red),
+                child: Text(
+                  l10n.delete,
+                  style: const TextStyle(color: Colors.red),
                 ),
               ),
             ],
@@ -493,10 +500,10 @@ class _AssetDetailScreenState extends ConsumerState<AssetDetailScreen> {
       // survives the navigation that immediately follows.
       messenger.showSnackBar(
         SnackBar(
-          content: Text('${snapshot.asset.name} deleted'),
+          content: Text(l10n.deletedItem(snapshot.asset.name)),
           duration: const Duration(seconds: 6),
           action: SnackBarAction(
-            label: 'Undo',
+            label: l10n.undo,
             onPressed: () => notifier.undoDelete(snapshot),
           ),
         ),

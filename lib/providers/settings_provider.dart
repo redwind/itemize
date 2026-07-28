@@ -104,7 +104,8 @@ class AppSettings {
   // Dong is never quoted with a fractional part.
   int get _decimalDigits => currencyCode == 'VND' ? 0 : 2;
 
-  /// Grouped, locale-aware amount — "$21,411.00" rather than "$21411.00".
+  /// Grouped, locale-aware amount — "$21,411.00" rather than "$21411.00",
+  /// and "21 411,00 €" once the app is in French.
   String formatAmount(double amount) => NumberFormat.currency(
     locale: languageCode,
     symbol: currencySymbol,
@@ -126,7 +127,18 @@ class AppSettings {
 /// rather than as unfinished, and reads worst to exactly the paying overseas
 /// customer it was there to attract. English alone is the honest state until
 /// another language is genuinely translated.
-const List<String> kSupportedLanguages = ['en'];
+const List<String> kSupportedLanguages = ['en', 'fr', 'de'];
+
+/// What each language calls itself, for the picker.
+///
+/// In the language itself, never translated: somebody hunting for their own
+/// language is scanning for the word they recognise, and "Allemand" is no help
+/// to a German speaker who has landed in a French interface by accident.
+const Map<String, String> kLanguageNames = {
+  'en': 'English',
+  'fr': 'Français',
+  'de': 'Deutsch',
+};
 
 /// The stored preference, or English when it names a language no longer shipped.
 String resolveLanguage(String? stored) =>

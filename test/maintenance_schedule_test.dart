@@ -145,7 +145,7 @@ void main() {
   });
 
   test('the offered intervals are all whole months and ordered', () {
-    final months = kMaintenanceIntervals.values.toList();
+    final months = kMaintenanceIntervals.toList();
     expect(months.every((m) => m > 0), isTrue);
     expect(months, orderedEquals([...months]..sort()));
   });

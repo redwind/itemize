@@ -10,14 +10,6 @@ enum ServiceKind {
   inspection,
 }
 
-extension ServiceKindLabel on ServiceKind {
-  String get label => switch (this) {
-    ServiceKind.maintenance => 'Maintenance',
-    ServiceKind.repair => 'Repair',
-    ServiceKind.inspection => 'Inspection',
-  };
-}
-
 /// One entry in an item's history.
 ///
 /// Two things come out of keeping these. Every repair has a cost, and the

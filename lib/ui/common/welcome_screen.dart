@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:itemize/core/theme/app_theme.dart';
 import 'package:itemize/providers/settings_provider.dart';
 import 'package:itemize/ui/add_item/quick_capture_screen.dart';
+import 'package:itemize/l10n/app_localizations.dart';
 
 /// Walks a new owner into photographing one room.
 ///
@@ -37,6 +38,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -47,35 +50,28 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
               const Spacer(),
               const Icon(Icons.inventory_2, size: 72, color: AppTheme.primaryBlue),
               const SizedBox(height: 28),
-              const Text(
-                'Start with one room',
-                style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+              Text(
+                l10n.welcomeTitle,
+                style: const TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.bold,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 14),
-              const Text(
-                'Most people give up on a home inventory somewhere around the '
-                'tenth item, because every one of them wants a form filling '
-                'in. So do it the other way round.',
-                style: TextStyle(fontSize: 15, color: Colors.grey),
+              Text(
+                l10n.welcomeBody,
+                style: const TextStyle(fontSize: 15, color: Colors.grey),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 36),
 
-              _step(
-                Icons.photo_camera,
-                'Photograph everything',
-                'The camera stays open between shots. Walk the room.',
-              ),
-              _step(
-                Icons.edit_note,
-                'Name it afterwards',
-                'Sitting down, in one list, with a cup of tea.',
-              ),
+              _step(Icons.photo_camera, l10n.welcomeStep1, l10n.welcomeStep1Hint),
+              _step(Icons.edit_note, l10n.welcomeStep2, l10n.welcomeStep2Hint),
               _step(
                 Icons.shield_outlined,
-                'Then it looks after itself',
-                'Warranties, servicing due, and a report if you ever claim.',
+                l10n.welcomeStep3,
+                l10n.welcomeStep3Hint,
               ),
 
               const Spacer(),
@@ -89,15 +85,18 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: const Text(
-                  'Photograph a room',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                child: Text(
+                  l10n.welcomeStart,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
               TextButton(
                 onPressed: _skip,
-                child: const Text('I will add things one at a time'),
+                child: Text(l10n.welcomeSkip),
               ),
             ],
           ),

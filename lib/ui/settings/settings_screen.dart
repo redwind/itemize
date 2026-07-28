@@ -44,16 +44,14 @@ class SettingsScreen extends ConsumerWidget {
               ),
               child: ListTile(
                 leading: const Icon(Icons.diamond, color: Colors.purple),
-                title: const Text(
-                  "Upgrade to Pro",
-                  style: TextStyle(
+                title: Text(
+                  l10n.upgradeToPro,
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.purple,
                   ),
                 ),
-                subtitle: const Text(
-                  "Insurance reports and backups. Everything else is free.",
-                ),
+                subtitle: Text(l10n.upgradeToProSubtitle),
                 trailing: const Icon(
                   Icons.arrow_forward_ios,
                   size: 16,
@@ -75,7 +73,7 @@ class SettingsScreen extends ConsumerWidget {
             title: Text(l10n.exportPdf),
             subtitle: Text(
               proState.isPro
-                  ? 'Full report: photos, serials, receipts, signed'
+                  ? l10n.exportPdfSubtitlePro
                   : l10n.exportPdfSubtitle,
             ),
             onTap: () => _exportReport(context, ref),
@@ -85,10 +83,10 @@ class SettingsScreen extends ConsumerWidget {
             title: Text(l10n.backupData),
             subtitle: Text(
               switch (settings.daysSinceBackup) {
-                null => 'Never backed up — save everything to one file',
-                0 => 'Last backed up today',
-                1 => 'Last backed up yesterday',
-                final days => 'Last backed up $days days ago',
+                null => l10n.backupNeverSubtitle,
+                0 => l10n.backupTodaySubtitle,
+                1 => l10n.backupYesterdaySubtitle,
+                final days => l10n.backupDaysAgoSubtitle(days),
               },
             ),
             trailing: proState.isPro ? null : const _ProChip(),
@@ -96,14 +94,34 @@ class SettingsScreen extends ConsumerWidget {
           ),
           ListTile(
             leading: const Icon(Icons.settings_backup_restore, color: Colors.orange),
-            title: const Text('Restore from a Backup'),
-            subtitle: const Text('Adds the items in a backup file to this app'),
+            title: Text(l10n.restoreBackup),
+            subtitle: Text(l10n.restoreBackupSubtitle),
             trailing: proState.isPro ? null : const _ProChip(),
             onTap: () => _restore(context, ref),
           ),
 
           const Divider(),
           _buildSectionHeader(l10n.preferences),
+          ListTile(
+            leading: const Icon(Icons.language),
+            title: Text(l10n.language),
+            subtitle: Text(kLanguageNames[settings.languageCode] ?? 'English'),
+            trailing: DropdownButton<String>(
+              value: resolveLanguage(settings.languageCode),
+              underline: const SizedBox(),
+              icon: const Icon(Icons.arrow_drop_down),
+              onChanged: (value) {
+                if (value != null) settingsNotifier.setLanguage(value);
+              },
+              items: [
+                for (final code in kSupportedLanguages)
+                  DropdownMenuItem(
+                    value: code,
+                    child: Text(kLanguageNames[code]!),
+                  ),
+              ],
+            ),
+          ),
           ListTile(
             leading: const Icon(Icons.attach_money),
             title: Text(l10n.currency),
@@ -132,11 +150,11 @@ class SettingsScreen extends ConsumerWidget {
           ),
           ListTile(
             leading: const Icon(Icons.shield_outlined, color: Colors.indigo),
-            title: const Text('Contents Cover Limit'),
+            title: Text(l10n.coverLimit),
             subtitle: Text(
               settings.hasCoverageLimit
                   ? settings.formatAmount(settings.coverageLimit)
-                  : 'Not set — tell us and we will warn you if you outgrow it',
+                  : l10n.coverLimitUnset,
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _editCoverageLimit(context, ref),
@@ -147,8 +165,8 @@ class SettingsScreen extends ConsumerWidget {
               Icons.notifications_active,
               color: Colors.teal,
             ),
-            title: const Text('Warranty Reminders'),
-            subtitle: const Text('Told 30, 7 and 1 days before one runs out'),
+            title: Text(l10n.warrantyReminders),
+            subtitle: Text(l10n.warrantyRemindersSubtitle),
             value: settings.warrantyRemindersEnabled,
             onChanged: (val) async {
               if (val) {
@@ -159,11 +177,7 @@ class SettingsScreen extends ConsumerWidget {
                 if (!granted) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          "Notifications are turned off for Itemize. Enable them in your device settings.",
-                        ),
-                      ),
+                      SnackBar(content: Text(l10n.notificationsOff)),
                     );
                   }
                   return;
@@ -178,8 +192,8 @@ class SettingsScreen extends ConsumerWidget {
 
           SwitchListTile(
             secondary: const Icon(Icons.build_circle_outlined, color: Colors.teal),
-            title: const Text('Maintenance Reminders'),
-            subtitle: const Text('Told a week before a scheduled job is due'),
+            title: Text(l10n.maintenanceReminders),
+            subtitle: Text(l10n.maintenanceRemindersSubtitle),
             value: settings.maintenanceRemindersEnabled,
             onChanged: (val) async {
               if (val) {
@@ -187,11 +201,7 @@ class SettingsScreen extends ConsumerWidget {
                 if (!granted) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          "Notifications are turned off for Itemize. Enable them in your device settings.",
-                        ),
-                      ),
+                      SnackBar(content: Text(l10n.notificationsOff)),
                     );
                   }
                   return;
@@ -211,7 +221,7 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: Text(
               proState.isPro
                   ? l10n.biometricLockSubtitle
-                  : "Available in Pro Version",
+                  : l10n.biometricProOnly,
             ),
             value: settings.isBiometricEnabled,
             onChanged: (val) async {
@@ -234,7 +244,7 @@ class SettingsScreen extends ConsumerWidget {
                   // If device security is gone (NotAvailable), we should allow disabling locally.
                   try {
                     final success = await AuthService().authenticate(
-                      reason: 'Authenticate to disable Lock',
+                      reason: l10n.authToDisableLock,
                     );
                     if (success) {
                       settingsNotifier.toggleBiometric(false);
@@ -245,10 +255,8 @@ class SettingsScreen extends ConsumerWidget {
                       settingsNotifier.toggleBiometric(false);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              "Device security disabled. Biometric lock turned off.",
-                            ),
+                          SnackBar(
+                            content: Text(l10n.biometricDeviceSecurityOff),
                           ),
                         );
                       }
@@ -259,15 +267,13 @@ class SettingsScreen extends ConsumerWidget {
                 }
               } on PlatformException catch (e) {
                 if (context.mounted) {
-                  String message = "Authentication failed.";
+                  String message = l10n.authFailed;
                   if (e.code == 'NotAvailable') {
-                    message =
-                        "Biometrics/Security not set up. Please enable a Lock Screen (PIN/Pattern).";
+                    message = l10n.authNotAvailable;
                   } else if (e.code == 'LockedOut') {
-                    message = "Too many attempts. Try again later.";
+                    message = l10n.authLockedOut;
                   } else if (e.code == 'PermanentlyLockedOut') {
-                    message =
-                        "Biometrics disabled. Use PIN/Pattern or re-enroll.";
+                    message = l10n.authPermanentlyLockedOut;
                   }
                   ScaffoldMessenger.of(
                     context,
@@ -336,10 +342,11 @@ class SettingsScreen extends ConsumerWidget {
   /// Read from the repository rather than the list provider so an active search
   /// on the Assets tab cannot quietly narrow what the report covers.
   Future<void> _exportReport(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
     if (ref.read(settingsProvider).isBiometricEnabled) {
       try {
         final ok = await AuthService().authenticate(
-          reason: 'Authenticate to export your inventory',
+          reason: l10n.authToExport,
         );
         if (!ok) return;
       } catch (_) {
@@ -351,7 +358,7 @@ class SettingsScreen extends ConsumerWidget {
     if (!context.mounted) return;
 
     if (assets.isEmpty) {
-      _snack(context, 'There is nothing to report on yet.');
+      _snack(context, l10n.nothingToReport);
       return;
     }
 
@@ -367,7 +374,8 @@ class SettingsScreen extends ConsumerWidget {
   /// its own to put this, and a backup sitting in the app's own sandbox would
   /// vanish with exactly the app it is meant to survive.
   Future<void> _backUp(BuildContext context, WidgetRef ref) async {
-    if (!await _allowed(context, ref, 'Authenticate to back up your data')) {
+    final l10n = AppLocalizations.of(context)!;
+    if (!await _allowed(context, ref, l10n.authToBackUp)) {
       return;
     }
 
@@ -376,11 +384,11 @@ class SettingsScreen extends ConsumerWidget {
     if (!context.mounted) return;
 
     if (assets.isEmpty) {
-      _snack(context, 'There is nothing to back up yet.');
+      _snack(context, l10n.nothingToBackUp);
       return;
     }
 
-    _showBusy(context, 'Preparing backup…');
+    _showBusy(context, l10n.preparingBackup);
     try {
       final file = await BackupService().export(
         assets,
@@ -393,20 +401,19 @@ class SettingsScreen extends ConsumerWidget {
       await ref.read(settingsProvider.notifier).recordBackup();
       await Share.shareXFiles(
         [XFile(file.path)],
-        subject: 'Itemize backup',
-        text:
-            'Itemize backup — ${assets.length} items. '
-            'Keep this file somewhere you can find it again.',
+        subject: l10n.backupData,
+        text: l10n.backupShareText(assets.length),
       );
     } catch (e) {
       if (!context.mounted) return;
       Navigator.pop(context); // busy
-      _snack(context, 'Backup failed: $e');
+      _snack(context, l10n.backupFailed('$e'));
     }
   }
 
   Future<void> _restore(BuildContext context, WidgetRef ref) async {
-    if (!await _allowed(context, ref, 'Authenticate to restore a backup')) {
+    final l10n = AppLocalizations.of(context)!;
+    if (!await _allowed(context, ref, l10n.authToRestore)) {
       return;
     }
 
@@ -420,7 +427,7 @@ class SettingsScreen extends ConsumerWidget {
     final path = picked?.files.single.path;
     if (path == null || !context.mounted) return;
 
-    _showBusy(context, 'Restoring…');
+    _showBusy(context, l10n.restoring);
     final repository = ref.read(assetRepositoryProvider);
     try {
       final result = await BackupService().import(
@@ -442,18 +449,20 @@ class SettingsScreen extends ConsumerWidget {
         context: context,
         builder:
             (ctx) => AlertDialog(
-              title: const Text('Restore complete'),
+              title: Text(l10n.restoreCompleteTitle),
               content: Text(
-                '${result.added} item${result.added == 1 ? '' : 's'} added, '
-                '${result.updated} updated, '
-                '${result.photosRestored} photo'
-                '${result.photosRestored == 1 ? '' : 's'} restored.\n\n'
-                'Nothing already on this device was removed.',
+                l10n.restoreCompleteBody(
+                  result.added,
+                  result.updated,
+                  result.photosRestored,
+                  result.schedulesRestored,
+                  result.recordsRestored,
+                ),
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('OK'),
+                  child: Text(l10n.ok),
                 ),
               ],
             ),
@@ -465,7 +474,7 @@ class SettingsScreen extends ConsumerWidget {
     } catch (e) {
       if (!context.mounted) return;
       Navigator.pop(context); // busy
-      _snack(context, 'Restore failed: $e');
+      _snack(context, l10n.restoreFailed('$e'));
     }
   }
 
@@ -566,16 +575,17 @@ class _CoverageLimitDialogState extends State<_CoverageLimitDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return AlertDialog(
-      title: const Text('Contents Cover Limit'),
+      title: Text(l10n.coverLimit),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'The most your policy pays out for belongings. Find it on '
-            'your schedule under contents.',
-            style: TextStyle(fontSize: 13, color: Colors.grey),
+          Text(
+            l10n.coverLimitDialogBody,
+            style: const TextStyle(fontSize: 13, color: Colors.grey),
           ),
           const SizedBox(height: 16),
           TextField(
@@ -584,7 +594,7 @@ class _CoverageLimitDialogState extends State<_CoverageLimitDialog> {
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(
               prefixText: widget.currencySymbol,
-              hintText: 'Leave empty to remove',
+              hintText: l10n.coverLimitHint,
             ),
             onSubmitted: (value) => Navigator.pop(context, value),
           ),
@@ -593,11 +603,11 @@ class _CoverageLimitDialogState extends State<_CoverageLimitDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(l10n.cancel),
         ),
         ElevatedButton(
           onPressed: () => Navigator.pop(context, _controller.text),
-          child: const Text('Save'),
+          child: Text(l10n.save),
         ),
       ],
     );
@@ -620,9 +630,9 @@ class _ProChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
         border: Border.all(color: Colors.purple.shade100),
       ),
-      child: const Text(
-        'PRO',
-        style: TextStyle(
+      child: Text(
+        AppLocalizations.of(context)!.proBadge,
+        style: const TextStyle(
           color: Colors.purple,
           fontSize: 11,
           fontWeight: FontWeight.bold,

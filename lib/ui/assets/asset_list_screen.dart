@@ -7,6 +7,8 @@ import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/providers/asset_provider.dart';
 import 'package:itemize/providers/settings_provider.dart';
 import 'package:itemize/ui/assets/asset_detail_screen.dart';
+import 'package:itemize/l10n/app_localizations.dart';
+import 'package:itemize/l10n/domain_labels.dart';
 
 class AssetListScreen extends ConsumerStatefulWidget {
   /// Shows only the items kept in this room, or every item when null.
@@ -41,9 +43,14 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
   @override
   Widget build(BuildContext context) {
     final assetsAsync = ref.watch(assetListProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.room ?? 'Assets')),
+      appBar: AppBar(
+        title: Text(
+          widget.room == null ? l10n.assetsTab : l10n.roomLabel(widget.room!),
+        ),
+      ),
       body: Column(
         children: [
           Padding(
@@ -51,7 +58,7 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
             child: CupertinoSearchTextField(
               controller: _searchController,
               onChanged: _onSearchChanged,
-              placeholder: 'Search assets...',
+              placeholder: l10n.searchPlaceholder,
             ),
           ),
           Expanded(
@@ -70,7 +77,7 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
                 }
 
                 if (displayAssets.isEmpty) {
-                  return const Center(child: Text('No assets found'));
+                  return Center(child: Text(l10n.noAssetsFound));
                 }
 
                 return ListView.separated(
@@ -79,12 +86,12 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final asset = displayAssets[index];
-                    return _buildAssetItem(asset, ref);
+                    return _buildAssetItem(asset, ref, l10n);
                   },
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Error: $err')),
+              error: (err, stack) => Center(child: Text(l10n.genericError(err.toString()))),
             ),
           ),
         ],
@@ -92,7 +99,7 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
     );
   }
 
-  Widget _buildAssetItem(Asset asset, WidgetRef ref) {
+  Widget _buildAssetItem(Asset asset, WidgetRef ref, AppLocalizations l10n) {
     final settings = ref.watch(settingsProvider);
     final thumbnail = ImageStorage.resolve(asset.imagePath);
     final bool isExpired =
@@ -159,7 +166,8 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
                     // Both, because the list is reached from a room grid and
                     // from a global search, and which one is the useful label
                     // depends on which way they came in.
-                    '${asset.room} · ${asset.category}',
+                    '${l10n.roomLabel(asset.room)} · '
+                    '${l10n.categoryLabel(asset.category)}',
                     style: const TextStyle(color: Colors.grey, fontSize: 12),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -175,7 +183,7 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  isExpired ? 'Exp' : 'Warranty',
+                  isExpired ? l10n.standingExpired : l10n.standingCovered,
                   style: TextStyle(
                     color: warrantyColor,
                     fontSize: 10,

@@ -2,6 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:itemize/core/catalog/asset_catalog.dart';
 import 'package:itemize/core/theme/app_theme.dart';
+import 'package:itemize/l10n/app_localizations.dart';
+import 'package:itemize/l10n/domain_labels.dart';
 
 /// Grid of stock item pictures. Pops with the chosen [CatalogItem], or null.
 class AssetLibraryScreen extends StatefulWidget {
@@ -45,12 +47,13 @@ class _AssetLibraryScreenState extends State<AssetLibraryScreen> {
     super.dispose();
   }
 
-  List<CatalogItem> get _visibleItems {
+  List<CatalogItem> _visibleItems(AppLocalizations l10n) {
     final query = _query.trim().toLowerCase();
     return assetCatalog.where((item) {
-      // A search should reach the whole catalog, not just the active room.
+      // A search should reach the whole catalog, not just the active room, and
+      // it matches the translated name because that is the word on screen.
       if (query.isNotEmpty) {
-        return item.label.toLowerCase().contains(query);
+        return l10n.catalogLabel(item.labelKey).toLowerCase().contains(query);
       }
       return _filter == _allFilter || item.category == _filter;
     }).toList();
@@ -58,10 +61,11 @@ class _AssetLibraryScreenState extends State<AssetLibraryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final items = _visibleItems;
+    final l10n = AppLocalizations.of(context)!;
+    final items = _visibleItems(l10n);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Photo Library')),
+      appBar: AppBar(title: Text(l10n.photoLibrary)),
       body: Column(
         children: [
           Padding(
@@ -98,7 +102,7 @@ class _AssetLibraryScreenState extends State<AssetLibraryScreen> {
           Expanded(
             child:
                 items.isEmpty
-                    ? const Center(child: Text('No matching items'))
+                    ? Center(child: Text(l10n.noMatchingItems))
                     : GridView.builder(
                       padding: const EdgeInsets.all(16),
                       gridDelegate:
@@ -145,7 +149,7 @@ class _AssetLibraryScreenState extends State<AssetLibraryScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            item.label,
+            AppLocalizations.of(context)!.catalogLabel(item.labelKey),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,

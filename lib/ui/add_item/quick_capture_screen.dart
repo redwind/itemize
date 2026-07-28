@@ -7,6 +7,8 @@ import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/providers/asset_provider.dart';
 import 'package:itemize/providers/settings_provider.dart';
 import 'package:uuid/uuid.dart';
+import 'package:itemize/l10n/app_localizations.dart';
+import 'package:itemize/l10n/domain_labels.dart';
 
 /// One photographed thing, waiting to be named.
 class _Draft {
@@ -138,14 +140,12 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
       return;
     }
 
+    final l10n = AppLocalizations.of(context)!;
+
     // The unnamed ones stay put rather than being thrown away with the
     // photographs the user just walked around taking.
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '${ready.length} saved. $leftover still needs a name.',
-        ),
-      ),
+      SnackBar(content: Text(l10n.savedNeedNames(ready.length, leftover))),
     );
   }
 
@@ -161,31 +161,33 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Quick Capture'),
+        title: Text(l10n.quickCaptureTitle),
         actions: [
           TextButton(
             onPressed: _namedCount == 0 || _isSaving ? null : _saveNamed,
-            child: Text(_namedCount == 0 ? 'Save' : 'Save $_namedCount'),
+            child: Text(_namedCount == 0 ? l10n.save : l10n.saveCount(_namedCount)),
           ),
         ],
       ),
       body: Column(
         children: [
-          _buildRoomAndCategory(),
+          _buildRoomAndCategory(l10n),
           const Divider(height: 1),
           Expanded(
             child:
                 _drafts.isEmpty
-                    ? _buildEmpty()
+                    ? _buildEmpty(l10n)
                     : ListView.separated(
                       padding: const EdgeInsets.all(16),
                       itemCount: _drafts.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder:
-                          (context, index) => _buildDraftRow(index, settings),
+                          (context, index) =>
+                              _buildDraftRow(index, settings, l10n),
                     ),
           ),
           if (_isSaving) const LinearProgressIndicator(),
@@ -199,7 +201,7 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
                     child: ElevatedButton.icon(
                       onPressed: _isSaving ? null : _capture,
                       icon: const Icon(Icons.photo_camera),
-                      label: const Text('Keep Shooting'),
+                      label: Text(l10n.keepShooting),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
@@ -225,7 +227,7 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
     );
   }
 
-  Widget _buildRoomAndCategory() {
+  Widget _buildRoomAndCategory(AppLocalizations l10n) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Row(
@@ -237,12 +239,17 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
               isDense: true,
               items:
                   kAssetRooms
-                      .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                      .map(
+                        (r) => DropdownMenuItem(
+                          value: r,
+                          child: Text(l10n.roomLabel(r)),
+                        ),
+                      )
                       .toList(),
               onChanged: (v) => setState(() => _room = v ?? _room),
-              decoration: const InputDecoration(
-                labelText: 'Room',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n.room,
+                border: const OutlineInputBorder(),
               ),
             ),
           ),
@@ -254,12 +261,17 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
               isDense: true,
               items:
                   kAssetCategories
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                      .map(
+                        (c) => DropdownMenuItem(
+                          value: c,
+                          child: Text(l10n.categoryLabel(c)),
+                        ),
+                      )
                       .toList(),
               onChanged: (v) => setState(() => _category = v ?? _category),
-              decoration: const InputDecoration(
-                labelText: 'Category',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n.category,
+                border: const OutlineInputBorder(),
               ),
             ),
           ),
@@ -268,25 +280,27 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
     );
   }
 
-  Widget _buildEmpty() {
-    return const Center(
+  Widget _buildEmpty(AppLocalizations l10n) {
+    return Center(
       child: Padding(
-        padding: EdgeInsets.all(32),
+        padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.burst_mode, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
+            const Icon(Icons.burst_mode, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
             Text(
-              'Photograph everything first',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              l10n.quickCaptureEmptyTitle,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
-              'The camera stays open between shots. Walk the room, then come '
-              'back here and name what you photographed.',
+              l10n.quickCaptureEmptyBody,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
+              style: const TextStyle(color: Colors.grey),
             ),
           ],
         ),
@@ -294,7 +308,11 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
     );
   }
 
-  Widget _buildDraftRow(int index, AppSettings settings) {
+  Widget _buildDraftRow(
+    int index,
+    AppSettings settings,
+    AppLocalizations l10n,
+  ) {
     final draft = _drafts[index];
     final file = ImageStorage.resolve(draft.photoPath);
 
@@ -326,8 +344,8 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
                 textInputAction: TextInputAction.next,
                 // Redraws the Save count in the app bar as names are typed.
                 onChanged: (_) => setState(() {}),
-                decoration: const InputDecoration(
-                  labelText: 'Name',
+                decoration: InputDecoration(
+                  labelText: l10n.itemName,
                   isDense: true,
                 ),
               ),
@@ -338,7 +356,7 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
                   decimal: true,
                 ),
                 decoration: InputDecoration(
-                  labelText: 'Price',
+                  labelText: l10n.price,
                   isDense: true,
                   prefixText: settings.currencySymbol,
                 ),
@@ -348,7 +366,7 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
         ),
         IconButton(
           icon: const Icon(Icons.close),
-          tooltip: 'Discard this photo',
+          tooltip: l10n.discardPhoto,
           onPressed: _isSaving ? null : () => _removeDraft(index),
         ),
       ],

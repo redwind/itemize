@@ -11,6 +11,8 @@ import 'package:itemize/providers/asset_provider.dart';
 import 'package:itemize/providers/settings_provider.dart';
 import 'package:itemize/ui/assets/asset_detail_screen.dart';
 import 'package:itemize/ui/care/asset_care_screen.dart';
+import 'package:itemize/l10n/app_localizations.dart';
+import 'package:itemize/l10n/domain_labels.dart';
 
 /// What the app is for between the day it is filled in and the day it is needed.
 ///
@@ -34,33 +36,32 @@ const int _backupNudgeAfterDays = 90;
 class _CareScreenState extends ConsumerState<CareScreen> {
   WarrantyStanding _filter = WarrantyStanding.expiringSoon;
 
-  static const Map<WarrantyStanding, String> _labels = {
-    WarrantyStanding.expiringSoon: 'Ending soon',
-    WarrantyStanding.covered: 'Covered',
-    WarrantyStanding.expired: 'Expired',
-    WarrantyStanding.unknown: 'No date',
-  };
+  String _label(AppLocalizations l10n, WarrantyStanding standing) =>
+      switch (standing) {
+        WarrantyStanding.expiringSoon => l10n.standingEndingSoon,
+        WarrantyStanding.covered => l10n.standingCovered,
+        WarrantyStanding.expired => l10n.standingExpired,
+        WarrantyStanding.unknown => l10n.standingUnknown,
+      };
 
-  static const Map<WarrantyStanding, String> _emptyMessages = {
-    WarrantyStanding.expiringSoon:
-        'Nothing is about to run out. This is where things appear in their '
-        'last three months of cover.',
-    WarrantyStanding.covered: 'Nothing here is under warranty yet.',
-    WarrantyStanding.expired: 'Nothing has run out of cover.',
-    WarrantyStanding.unknown:
-        'Every item has a warranty date on it. Adding them is what makes this '
-        'screen worth opening.',
-  };
+  String _emptyMessage(AppLocalizations l10n, WarrantyStanding standing) =>
+      switch (standing) {
+        WarrantyStanding.expiringSoon => l10n.emptyEndingSoon,
+        WarrantyStanding.covered => l10n.emptyCovered,
+        WarrantyStanding.expired => l10n.emptyExpired,
+        WarrantyStanding.unknown => l10n.emptyUnknown,
+      };
 
   @override
   Widget build(BuildContext context) {
     final assetsAsync = ref.watch(allAssetsProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Care')),
+      appBar: AppBar(title: Text(l10n.careTab)),
       body: assetsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('Error: $err')),
+        error: (err, _) => Center(child: Text(l10n.genericError('$err'))),
         data: (assets) {
           final grouped = WarrantyStatus.group(assets);
           final shown = grouped[_filter]!;
@@ -68,14 +69,14 @@ class _CareScreenState extends ConsumerState<CareScreen> {
           return ListView(
             padding: const EdgeInsets.only(bottom: 24),
             children: [
-              _buildBackupNudge(assets),
-              _buildReviewSection(assets),
-              _buildMaintenanceSection(),
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+              _buildBackupNudge(assets, l10n),
+              _buildReviewSection(assets, l10n),
+              _buildMaintenanceSection(l10n),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Text(
-                  'WARRANTIES',
-                  style: TextStyle(
+                  l10n.warranties.toUpperCase(),
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                     color: Colors.grey,
@@ -83,14 +84,14 @@ class _CareScreenState extends ConsumerState<CareScreen> {
                   ),
                 ),
               ),
-              _buildFilters(grouped),
+              _buildFilters(grouped, l10n),
               if (shown.isEmpty)
-                _buildEmpty()
+                _buildEmpty(l10n)
               else
                 ...shown.map(
                   (asset) => Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                    child: _buildRow(asset),
+                    child: _buildRow(asset, l10n),
                   ),
                 ),
             ],
@@ -100,7 +101,10 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     );
   }
 
-  Widget _buildFilters(Map<WarrantyStanding, List<Asset>> grouped) {
+  Widget _buildFilters(
+    Map<WarrantyStanding, List<Asset>> grouped,
+    AppLocalizations l10n,
+  ) {
     // Ordered by urgency rather than by the enum: what is about to lapse is
     // what someone needs to see first, and it is the tab that opens.
     const order = [
@@ -119,7 +123,12 @@ class _CareScreenState extends ConsumerState<CareScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: ChoiceChip(
-                label: Text('${_labels[standing]} (${grouped[standing]!.length})'),
+                label: Text(
+                  l10n.standingCountLabel(
+                    _label(l10n, standing),
+                    grouped[standing]!.length,
+                  ),
+                ),
                 selected: _filter == standing,
                 onSelected: (_) => setState(() => _filter = standing),
               ),
@@ -129,7 +138,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     );
   }
 
-  Widget _buildEmpty() {
+  Widget _buildEmpty(AppLocalizations l10n) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(32, 24, 32, 32),
       child: Column(
@@ -141,7 +150,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            _emptyMessages[_filter]!,
+            _emptyMessage(l10n, _filter),
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.grey),
           ),
@@ -155,7 +164,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
   /// Only once there is something to lose, and only after long enough that the
   /// warning means something. A new user who has entered three items does not
   /// need telling to protect them.
-  Widget _buildBackupNudge(List<Asset> assets) {
+  Widget _buildBackupNudge(List<Asset> assets, AppLocalizations l10n) {
     if (assets.length < _backupNudgeMinItems) return const SizedBox.shrink();
 
     final days = ref.watch(settingsProvider).daysSinceBackup;
@@ -182,8 +191,8 @@ class _CareScreenState extends ConsumerState<CareScreen> {
               children: [
                 Text(
                   days == null
-                      ? 'This is only on this phone'
-                      : 'No backup for $days days',
+                      ? l10n.backupNudgeNever
+                      : l10n.backupNudgeDays(days),
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.orange.shade900,
@@ -191,8 +200,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${assets.length} items, their photographs and every repair '
-                  'you have logged. Lose the phone and it goes with it.',
+                  l10n.backupNudgeBody(assets.length),
                   style: const TextStyle(fontSize: 12),
                 ),
               ],
@@ -207,7 +215,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
   ///
   /// Shown a few at a time rather than as a list of two hundred, because a
   /// chore nobody starts keeps nothing accurate. The rest come round next time.
-  Widget _buildReviewSection(List<Asset> assets) {
+  Widget _buildReviewSection(List<Asset> assets, AppLocalizations l10n) {
     final batch = ReviewStatus.nextBatch(assets);
     if (batch.isEmpty) return const SizedBox.shrink();
 
@@ -230,9 +238,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  total == 1
-                      ? '1 entry to check'
-                      : '$total entries to check',
+                  l10n.entriesToCheck(total),
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: AppTheme.primaryBlue,
@@ -242,10 +248,9 @@ class _CareScreenState extends ConsumerState<CareScreen> {
             ],
           ),
           const SizedBox(height: 4),
-          const Text(
-            'Still own these, and are the details still right? A list that has '
-            'drifted is one an insurer can argue with.',
-            style: TextStyle(fontSize: 12),
+          Text(
+            l10n.entriesToCheckBody,
+            style: const TextStyle(fontSize: 12),
           ),
           const SizedBox(height: 8),
           for (final asset in batch)
@@ -265,7 +270,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
                         () => ref
                             .read(assetListProvider.notifier)
                             .markReviewed(asset),
-                    child: const Text('Still right'),
+                    child: Text(l10n.stillRight),
                   ),
                   TextButton(
                     onPressed:
@@ -275,7 +280,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
                             builder: (_) => AssetDetailScreen(asset: asset),
                           ),
                         ),
-                    child: const Text('Check'),
+                    child: Text(l10n.check),
                   ),
                 ],
               ),
@@ -290,7 +295,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
   /// Leads the screen because it is the part that changes: a warranty date sits
   /// still for years, whereas something falls due every few weeks, and that is
   /// what makes the app worth opening again.
-  Widget _buildMaintenanceSection() {
+  Widget _buildMaintenanceSection(AppLocalizations l10n) {
     final plan = ref.watch(maintenancePlanProvider).valueOrNull;
     if (plan == null) return const SizedBox.shrink();
 
@@ -298,12 +303,11 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     final atRisk = MaintenancePlanner.threateningWarranty(plan);
 
     if (plan.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
         child: Text(
-          'Nothing scheduled anywhere yet. Open any item and add what it needs '
-          'doing — a filter, a service — and it will show up here when due.',
-          style: TextStyle(color: Colors.grey, fontSize: 13),
+          l10n.nothingScheduledAnywhere,
+          style: const TextStyle(color: Colors.grey, fontSize: 13),
         ),
       );
     }
@@ -321,7 +325,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Text(
-            'NEEDS DOING (${attention.length})',
+            l10n.needsDoing(attention.length).toUpperCase(),
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.bold,
@@ -349,18 +353,16 @@ class _CareScreenState extends ConsumerState<CareScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${atRisk.length} warrant${atRisk.length == 1 ? 'y is' : 'ies are'} at risk',
+                        l10n.warrantiesAtRisk(atRisk.length),
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           color: AppTheme.errorRed,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
-                        'Servicing these items is a condition of their cover, '
-                        'and it has lapsed. A missed service is grounds to '
-                        'decline a claim.',
-                        style: TextStyle(fontSize: 12),
+                      Text(
+                        l10n.warrantiesAtRiskBody,
+                        style: const TextStyle(fontSize: 12),
                       ),
                     ],
                   ),
@@ -369,25 +371,25 @@ class _CareScreenState extends ConsumerState<CareScreen> {
             ),
           ),
         if (ordered.isEmpty)
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: Text(
-              'Nothing due in the next fortnight.',
-              style: TextStyle(color: Colors.grey, fontSize: 13),
+              l10n.nothingDueFortnight,
+              style: const TextStyle(color: Colors.grey, fontSize: 13),
             ),
           )
         else
           ...ordered.map(
             (due) => Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: _buildDueRow(due),
+              child: _buildDueRow(due, l10n),
             ),
           ),
       ],
     );
   }
 
-  Widget _buildDueRow(MaintenanceDue due) {
+  Widget _buildDueRow(MaintenanceDue due, AppLocalizations l10n) {
     final days = due.daysUntilDue();
     final overdue = due.isOverdue();
     final atRisk = due.threatensWarranty();
@@ -438,7 +440,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
               ),
             ),
             Text(
-              overdue ? '${-days} d late' : 'in $days d',
+              overdue ? l10n.daysLate(-days) : l10n.dueInDays(days),
               style: TextStyle(
                 color: color,
                 fontWeight: FontWeight.bold,
@@ -451,7 +453,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     );
   }
 
-  Widget _buildRow(Asset asset) {
+  Widget _buildRow(Asset asset, AppLocalizations l10n) {
     final days = WarrantyStatus.daysRemaining(asset);
     final thumbnail = ImageStorage.resolve(asset.imagePath);
     final standing = WarrantyStatus.of(asset);
@@ -500,7 +502,8 @@ class _CareScreenState extends ConsumerState<CareScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    '${asset.room} · ${asset.category}',
+                    '${l10n.roomLabel(asset.room)} · '
+                    '${l10n.categoryLabel(asset.category)}',
                     style: const TextStyle(color: Colors.grey, fontSize: 12),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -508,18 +511,23 @@ class _CareScreenState extends ConsumerState<CareScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            _buildRemaining(standing, days, asset),
+            _buildRemaining(standing, days, asset, l10n),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildRemaining(WarrantyStanding standing, int? days, Asset asset) {
+  Widget _buildRemaining(
+    WarrantyStanding standing,
+    int? days,
+    Asset asset,
+    AppLocalizations l10n,
+  ) {
     if (days == null || asset.warrantyExpiry == null) {
-      return const Text(
-        'Not recorded',
-        style: TextStyle(color: Colors.grey, fontSize: 12),
+      return Text(
+        l10n.notRecorded,
+        style: const TextStyle(color: Colors.grey, fontSize: 12),
       );
     }
 
@@ -534,7 +542,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Text(
-          _remainingLabel(days),
+          _remainingLabel(l10n, days),
           style: TextStyle(
             color: color,
             fontWeight: FontWeight.bold,
@@ -553,19 +561,21 @@ class _CareScreenState extends ConsumerState<CareScreen> {
   /// Days, weeks or months, whichever reads as a decision rather than a number.
   ///
   /// "412 days left" is arithmetic; "1 yr 2 mo left" is an answer.
-  static String _remainingLabel(int days) {
+  static String _remainingLabel(AppLocalizations l10n, int days) {
     if (days < 0) {
       final gone = -days;
-      if (gone < 31) return 'Ended $gone d ago';
-      if (gone < 365) return 'Ended ${(gone / 30).round()} mo ago';
-      return 'Ended ${(gone / 365).floor()} yr ago';
+      if (gone < 31) return l10n.endedDaysAgo(gone);
+      if (gone < 365) return l10n.endedMonthsAgo((gone / 30).round());
+      return l10n.endedYearsAgo((gone / 365).floor());
     }
-    if (days == 0) return 'Ends today';
-    if (days < 31) return '$days d left';
-    if (days < 365) return '${(days / 30).round()} mo left';
+    if (days == 0) return l10n.endsToday;
+    if (days < 31) return l10n.daysLeft(days);
+    if (days < 365) return l10n.monthsLeft((days / 30).round());
 
     final years = days ~/ 365;
     final months = ((days % 365) / 30).round();
-    return months == 0 ? '$years yr left' : '$years yr $months mo left';
+    return months == 0
+        ? l10n.yearsLeft(years)
+        : l10n.yearsMonthsLeft(years, months);
   }
 }

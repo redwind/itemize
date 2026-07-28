@@ -1,38 +1,34 @@
 /// Common intervals, offered so nobody has to think in months.
-const Map<String, int> kMaintenanceIntervals = {
-  'Monthly': 1,
-  'Every 3 months': 3,
-  'Every 6 months': 6,
-  'Yearly': 12,
-  'Every 2 years': 24,
-};
+///
+/// Months rather than labels: the wording is translated at display time, and a
+/// map keyed by an English phrase would have made the interval depend on the
+/// language the app happened to be in.
+const List<int> kMaintenanceIntervals = [1, 3, 6, 12, 24];
 
 /// Jobs an item needs doing again and again, offered as a starting point.
 ///
 /// Keyed by category, because what a fridge needs and what a boiler needs have
 /// nothing in common and asking someone to invent the list from nothing is the
-/// blank-page problem that stops people using this at all.
-const Map<String, List<({String title, int months, bool warranty})>>
+/// blank-page problem that stops people using this at all. The key stays the
+/// English category held in the database; the title is a translation key, so
+/// the suggestion reads in the owner's language without the filing changing.
+const Map<String, List<({String titleKey, int months, bool warranty})>>
 kSuggestedMaintenance = {
   'Appliances': [
-    (title: 'Replace water filter', months: 6, warranty: false),
-    (title: 'Clean condenser coils', months: 12, warranty: false),
-    (title: 'Annual service', months: 12, warranty: true),
+    (titleKey: 'replaceWaterFilter', months: 6, warranty: false),
+    (titleKey: 'cleanCoils', months: 12, warranty: false),
+    (titleKey: 'annualService', months: 12, warranty: true),
   ],
   'Electronics': [
-    (title: 'Clean dust from vents', months: 6, warranty: false),
-    (title: 'Replace backup battery', months: 24, warranty: false),
+    (titleKey: 'cleanVents', months: 6, warranty: false),
+    (titleKey: 'replaceBattery', months: 24, warranty: false),
   ],
   'Tools & Equipment': [
-    (title: 'Service and sharpen', months: 12, warranty: false),
-    (title: 'Safety inspection', months: 12, warranty: true),
+    (titleKey: 'serviceSharpen', months: 12, warranty: false),
+    (titleKey: 'safetyInspection', months: 12, warranty: true),
   ],
-  'Furniture': [
-    (title: 'Treat or re-oil', months: 12, warranty: false),
-  ],
-  'Sports & Outdoors': [
-    (title: 'Service', months: 12, warranty: false),
-  ],
+  'Furniture': [(titleKey: 'treatOil', months: 12, warranty: false)],
+  'Sports & Outdoors': [(titleKey: 'service', months: 12, warranty: false)],
 };
 
 /// A recurring job attached to one item.
