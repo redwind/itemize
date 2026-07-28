@@ -1,5 +1,5 @@
 # Uncomment this line to define a global platform for your project
-# platform :ios, '12.0'
+# platform :ios, '13.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -36,8 +36,60 @@ target 'Runner' do
   end
 end
 
+# Google's MLKit pods ship fat frameworks whose arm64 slice is device-only, so
+# their podspecs set EXCLUDED_ARCHS[iphonesimulator]=arm64. That leaves the
+# Pods-Runner umbrella target with no buildable architecture on an arm64-only
+# simulator (iOS 26+), Xcode drops it from the dependency graph, and the app
+# fails to link with "framework 'Pods_Runner' not found".
+#
+# scripts/mlkit_arm64_sim.py stages copies whose arm64 objects are retargeted to
+# the simulator platform under each pod's Frameworks-sim directory. Selecting
+# between Frameworks and Frameworks-sim by SDK keeps device builds on Google's
+# untouched binaries.
+def enable_mlkit_arm64_simulator(installer)
+  script = File.join(__dir__, 'scripts', 'mlkit_arm64_sim.py')
+  pods_root = File.join(__dir__, 'Pods')
+  unless system('python3', script, pods_root)
+    raise 'Failed to build arm64-simulator variants of the MLKit frameworks'
+  end
+
+  Dir.glob(File.join(pods_root, 'Target Support Files', '**', '*.xcconfig')).each do |path|
+    lines = File.readlines(path)
+    changed = false
+
+    lines.reject! do |line|
+      drop = line.start_with?('EXCLUDED_ARCHS[sdk=iphonesimulator*]') && line.include?('arm64')
+      changed ||= drop
+      drop
+    end
+
+    lines.map! do |line|
+      next line unless line.start_with?('FRAMEWORK_SEARCH_PATHS') && line.include?('/Frameworks"')
+      changed = true
+      line.gsub(%r{(\$\{PODS_ROOT\}/ML[^"]*)/Frameworks"}, '\1/Frameworks$(MLKIT_FRAMEWORKS_SUFFIX)"')
+    end
+
+    next unless changed
+
+    lines << "\n"
+    lines << "MLKIT_FRAMEWORKS_SUFFIX =\n"
+    lines << "MLKIT_FRAMEWORKS_SUFFIX[sdk=iphonesimulator*] = -sim\n"
+    File.write(path, lines.join)
+  end
+end
+
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+
+    target.build_configurations.each do |config|
+      excluded = config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]']
+      next if excluded.nil?
+
+      kept = Array(excluded).join(' ').split.reject { |arch| arch == 'arm64' }
+      config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = kept.join(' ')
+    end
   end
+
+  enable_mlkit_arm64_simulator(installer)
 end
