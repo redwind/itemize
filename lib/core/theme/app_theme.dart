@@ -19,8 +19,9 @@ class AppTheme {
     colorScheme: ColorScheme.fromSeed(
       seedColor: primaryBlue,
       primary: primaryBlue,
+      // Material 3 folded `background` into `surface`; the page backdrop is
+      // set by scaffoldBackgroundColor above, so nothing is lost by dropping it.
       surface: cardColor,
-      background: background,
       error: errorRed,
     ),
     fontFamily: 'SF Pro Display', // Fallback to system if not found
@@ -37,7 +38,7 @@ class AppTheme {
         fontFamily: 'SF Pro Display',
       ),
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: cardColor,
       elevation: 0, // Flat apple style, maybe nice border or shadow
       shape: RoundedRectangleBorder(
