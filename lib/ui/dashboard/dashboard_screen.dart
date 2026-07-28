@@ -2,10 +2,11 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:itemize/core/theme/app_theme.dart';
+import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/providers/asset_provider.dart';
 import 'package:itemize/providers/settings_provider.dart';
 import 'package:itemize/ui/assets/asset_list_screen.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:itemize/l10n/app_localizations.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -23,6 +24,7 @@ class DashboardScreen extends ConsumerWidget {
         child: Column(
           children: [
             _buildTotalValueCard(totalValue, l10n, ref),
+            _buildCoverageWarning(ref),
             const SizedBox(height: 24),
             SizedBox(
               height: 250,
@@ -46,10 +48,9 @@ class DashboardScreen extends ConsumerWidget {
     AppLocalizations l10n,
     WidgetRef ref,
   ) {
-    // Format currency properly later using intl
     final settings = ref.watch(settingsProvider);
-    final formattedValue =
-        '${settings.currencySymbol}${value.toStringAsFixed(2)}';
+    final depreciation = ref.watch(depreciationProvider);
+    final formattedValue = settings.formatAmount(value);
 
     return Container(
       width: double.infinity,
@@ -80,6 +81,90 @@ class DashboardScreen extends ConsumerWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
+          // The figure a cash-value policy would actually settle on. Shown
+          // beside what was paid because the gap between them is the thing
+          // owners discover too late, and only when they are already claiming.
+          if (depreciation.totalPaid > 0) ...[
+            const SizedBox(height: 12),
+            const Divider(color: Colors.white24, height: 1),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Estimated value today',
+                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+                Text(
+                  settings.formatAmount(depreciation.totalCurrent),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Says so when what the owner has recorded has outgrown their policy.
+  ///
+  /// Compared against the estimated current value, not the purchase total: on a
+  /// cash-value policy that is the figure a claim is settled at, so it is the
+  /// one that has to fit under the limit. Shown only once there is a limit to
+  /// compare against, and only when it has actually been passed — a banner that
+  /// is always there is a banner nobody reads.
+  Widget _buildCoverageWarning(WidgetRef ref) {
+    final settings = ref.watch(settingsProvider);
+    final depreciation = ref.watch(depreciationProvider);
+
+    if (!settings.hasCoverageLimit) return const SizedBox.shrink();
+    if (depreciation.totalCurrent <= settings.coverageLimit) {
+      return const SizedBox.shrink();
+    }
+
+    final shortfall = depreciation.totalCurrent - settings.coverageLimit;
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.errorRed.withAlpha(20),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.errorRed.withAlpha(70)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.report_problem, color: AppTheme.errorRed),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'You may be under-insured',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.errorRed,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'What you have recorded is worth about '
+                  '${settings.formatAmount(shortfall)} more than your '
+                  '${settings.formatAmount(settings.coverageLimit)} contents '
+                  'cover. Worth a word with your insurer.',
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -91,11 +176,13 @@ class DashboardScreen extends ConsumerWidget {
       return const Center(child: Text('No assets data'));
     }
 
-    // Group by category
+    // Grouped by room rather than category: it matches the room grid directly
+    // below, and every item has a room, whereas items carried over from before
+    // the two were split have no category yet.
     final Map<String, double> categoryValues = {};
     for (var asset in assets) {
-      final category = asset.category;
-      categoryValues[category] = (categoryValues[category] ?? 0) + asset.price;
+      final room = asset.room;
+      categoryValues[room] = (categoryValues[room] ?? 0) + asset.price;
     }
 
     // Sort by value desc
@@ -165,7 +252,7 @@ class DashboardScreen extends ConsumerWidget {
                           ),
                         ),
                         Text(
-                          '${settings.currencySymbol}${e.value.toStringAsFixed(0)}', // Rounded for cleaner look in legend
+                          settings.formatAmountCompact(e.value),
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
@@ -182,14 +269,7 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildRoomGrid(BuildContext context) {
-    final rooms = [
-      'Living Room',
-      'Kitchen',
-      'Bedroom',
-      'Office',
-      'Garage',
-      'Other',
-    ];
+    const rooms = kAssetRooms;
 
     return GridView.builder(
       shrinkWrap: true,
@@ -213,7 +293,7 @@ class DashboardScreen extends ConsumerWidget {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => AssetListScreen(category: room)),
+          MaterialPageRoute(builder: (_) => AssetListScreen(room: room)),
         );
       },
       child: Container(

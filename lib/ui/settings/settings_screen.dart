@@ -2,9 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:itemize/l10n/app_localizations.dart';
 import 'package:itemize/core/theme/app_theme.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:itemize/core/utils/auth_service.dart';
+import 'package:itemize/core/utils/backup_service.dart';
+import 'package:itemize/core/utils/reminders.dart';
+import 'package:share_plus/share_plus.dart';
 // import 'package:itemize/core/utils/pdf_service.dart';
 import 'package:itemize/providers/asset_provider.dart';
 import 'package:itemize/providers/settings_provider.dart';
@@ -48,7 +52,7 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 ),
                 subtitle: const Text(
-                  "Unlock unlimited items, biometrics, and more.",
+                  "Insurance reports and backups. Everything else is free.",
                 ),
                 trailing: const Icon(
                   Icons.arrow_forward_ios,
@@ -69,89 +73,37 @@ class SettingsScreen extends ConsumerWidget {
               color: AppTheme.primaryBlue,
             ),
             title: Text(l10n.exportPdf),
-            subtitle: Text(l10n.exportPdfSubtitle),
-            onTap: () async {
-              try {
-                // Check biometric if enabled
-                if (settings.isBiometricEnabled) {
-                  final authenticated = await AuthService().authenticate(
-                    reason: 'Authenticate to Export Data',
-                  );
-                  if (!authenticated) return;
-                }
-
-                final assetsValue = ref.read(assetListProvider);
-                assetsValue.when(
-                  data: (data) async {
-                    if (data.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("No assets to export")),
-                      );
-                      return;
-                    }
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Generating PDF...")),
-                    );
-                    if (context.mounted) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PdfPreviewScreen(assets: data),
-                        ),
-                      );
-                    }
-                  },
-                  error:
-                      (e, s) => ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text("Error: $e"))),
-                  loading:
-                      () => ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Please wait, data loading..."),
-                        ),
-                      ),
-                );
-              } catch (e) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text("Export Failed: $e")));
-              }
-            },
+            subtitle: Text(
+              proState.isPro
+                  ? 'Full report: photos, serials, receipts, signed'
+                  : l10n.exportPdfSubtitle,
+            ),
+            onTap: () => _exportReport(context, ref),
           ),
           ListTile(
             leading: const Icon(Icons.backup, color: Colors.orange),
             title: Text(l10n.backupData),
-            subtitle: Text(l10n.backupDataSubtitle),
-            onTap: () {},
+            subtitle: Text(
+              switch (settings.daysSinceBackup) {
+                null => 'Never backed up — save everything to one file',
+                0 => 'Last backed up today',
+                1 => 'Last backed up yesterday',
+                final days => 'Last backed up $days days ago',
+              },
+            ),
+            trailing: proState.isPro ? null : const _ProChip(),
+            onTap: () => _backUp(context, ref),
+          ),
+          ListTile(
+            leading: const Icon(Icons.settings_backup_restore, color: Colors.orange),
+            title: const Text('Restore from a Backup'),
+            subtitle: const Text('Adds the items in a backup file to this app'),
+            trailing: proState.isPro ? null : const _ProChip(),
+            onTap: () => _restore(context, ref),
           ),
 
           const Divider(),
           _buildSectionHeader(l10n.preferences),
-          ListTile(
-            leading: const Icon(Icons.language),
-            title: Text(l10n.language),
-            subtitle: Text(_getLanguageName(settings.languageCode)),
-            trailing: DropdownButton<String>(
-              value: settings.languageCode,
-              underline: const SizedBox(), // Hide default underline
-              icon: const Icon(Icons.arrow_drop_down),
-              onChanged: (String? newValue) {
-                if (newValue != null) {
-                  settingsNotifier.setLanguage(newValue);
-                }
-              },
-              items:
-                  ['en', 'vi', 'fr', 'de'].map<DropdownMenuItem<String>>((
-                    String value,
-                  ) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(_getLanguageName(value)),
-                    );
-                  }).toList(),
-            ),
-          ),
           ListTile(
             leading: const Icon(Icons.attach_money),
             title: Text(l10n.currency),
@@ -178,6 +130,78 @@ class SettingsScreen extends ConsumerWidget {
                   }).toList(),
             ),
           ),
+          ListTile(
+            leading: const Icon(Icons.shield_outlined, color: Colors.indigo),
+            title: const Text('Contents Cover Limit'),
+            subtitle: Text(
+              settings.hasCoverageLimit
+                  ? settings.formatAmount(settings.coverageLimit)
+                  : 'Not set — tell us and we will warn you if you outgrow it',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _editCoverageLimit(context, ref),
+          ),
+
+          SwitchListTile(
+            secondary: const Icon(
+              Icons.notifications_active,
+              color: Colors.teal,
+            ),
+            title: const Text('Warranty Reminders'),
+            subtitle: const Text('Told 30, 7 and 1 days before one runs out'),
+            value: settings.warrantyRemindersEnabled,
+            onChanged: (val) async {
+              if (val) {
+                // Asked for here rather than at first launch, where it would
+                // land before there is anything to be reminded about.
+                final granted =
+                    await Reminders.instance.requestPermission();
+                if (!granted) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          "Notifications are turned off for Itemize. Enable them in your device settings.",
+                        ),
+                      ),
+                    );
+                  }
+                  return;
+                }
+              }
+              await settingsNotifier.toggleWarrantyReminders(val);
+              // Reloading rebuilds the schedule: the sync runs off every
+              // reload, so this is what applies the switch that was just moved.
+              await ref.read(assetListProvider.notifier).loadAssets();
+            },
+          ),
+
+          SwitchListTile(
+            secondary: const Icon(Icons.build_circle_outlined, color: Colors.teal),
+            title: const Text('Maintenance Reminders'),
+            subtitle: const Text('Told a week before a scheduled job is due'),
+            value: settings.maintenanceRemindersEnabled,
+            onChanged: (val) async {
+              if (val) {
+                final granted = await Reminders.instance.requestPermission();
+                if (!granted) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          "Notifications are turned off for Itemize. Enable them in your device settings.",
+                        ),
+                      ),
+                    );
+                  }
+                  return;
+                }
+              }
+              await settingsNotifier.toggleMaintenanceReminders(val);
+              await ref.read(assetListProvider.notifier).loadAssets();
+            },
+          ),
+
           SwitchListTile(
             secondary: Icon(
               Icons.fingerprint,
@@ -284,19 +308,215 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  String _getLanguageName(String code) {
-    switch (code) {
-      case 'en':
-        return 'English';
-      case 'vi':
-        return 'Tiếng Việt';
-      case 'fr':
-        return 'Français';
-      case 'de':
-        return 'Deutsch';
-      default:
-        return code.toUpperCase();
+  Future<void> _editCoverageLimit(BuildContext context, WidgetRef ref) async {
+    final settings = ref.read(settingsProvider);
+
+    final entered = await showDialog<String>(
+      context: context,
+      builder:
+          (ctx) => _CoverageLimitDialog(
+            initialValue:
+                settings.hasCoverageLimit
+                    ? settings.coverageLimit.toString()
+                    : '',
+            currencySymbol: settings.currencySymbol,
+          ),
+    );
+
+    if (entered == null) return;
+    await ref
+        .read(settingsProvider.notifier)
+        .setCoverageLimit(double.tryParse(entered.trim()) ?? 0);
+  }
+
+  /// Opens the report preview.
+  ///
+  /// Free users get here too, and get the summary report — the paywall is the
+  /// difference between the two documents, not a locked door in front of both.
+  /// Read from the repository rather than the list provider so an active search
+  /// on the Assets tab cannot quietly narrow what the report covers.
+  Future<void> _exportReport(BuildContext context, WidgetRef ref) async {
+    if (ref.read(settingsProvider).isBiometricEnabled) {
+      try {
+        final ok = await AuthService().authenticate(
+          reason: 'Authenticate to export your inventory',
+        );
+        if (!ok) return;
+      } catch (_) {
+        return;
+      }
     }
+
+    final assets = await ref.read(assetRepositoryProvider).getAllAssets();
+    if (!context.mounted) return;
+
+    if (assets.isEmpty) {
+      _snack(context, 'There is nothing to report on yet.');
+      return;
+    }
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => PdfPreviewScreen(assets: assets)),
+    );
+  }
+
+  /// Writes the whole inventory to a file and hands it to the share sheet.
+  ///
+  /// Sharing rather than saving on the user's behalf: the app has nowhere of
+  /// its own to put this, and a backup sitting in the app's own sandbox would
+  /// vanish with exactly the app it is meant to survive.
+  Future<void> _backUp(BuildContext context, WidgetRef ref) async {
+    if (!await _allowed(context, ref, 'Authenticate to back up your data')) {
+      return;
+    }
+
+    final repository = ref.read(assetRepositoryProvider);
+    final assets = await repository.getAllAssets();
+    if (!context.mounted) return;
+
+    if (assets.isEmpty) {
+      _snack(context, 'There is nothing to back up yet.');
+      return;
+    }
+
+    _showBusy(context, 'Preparing backup…');
+    try {
+      final file = await BackupService().export(
+        assets,
+        schedules: await repository.allSchedules(),
+        serviceRecords: await repository.allServiceRecords(),
+      );
+      if (!context.mounted) return;
+      Navigator.pop(context); // busy
+
+      await ref.read(settingsProvider.notifier).recordBackup();
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: 'Itemize backup',
+        text:
+            'Itemize backup — ${assets.length} items. '
+            'Keep this file somewhere you can find it again.',
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.pop(context); // busy
+      _snack(context, 'Backup failed: $e');
+    }
+  }
+
+  Future<void> _restore(BuildContext context, WidgetRef ref) async {
+    if (!await _allowed(context, ref, 'Authenticate to restore a backup')) {
+      return;
+    }
+
+    final picked = await FilePicker.pickFiles(
+      // Not filtered to the extension: iOS will not offer a custom type it does
+      // not know, which leaves the user staring at a file picker that greys out
+      // the very file they are looking for.
+      type: FileType.any,
+      allowMultiple: false,
+    );
+    final path = picked?.files.single.path;
+    if (path == null || !context.mounted) return;
+
+    _showBusy(context, 'Restoring…');
+    final repository = ref.read(assetRepositoryProvider);
+    try {
+      final result = await BackupService().import(
+        path,
+        findExisting: repository.findAsset,
+        addAsset: repository.addAsset,
+        updateAsset: repository.updateAsset,
+        saveSchedule: repository.saveSchedule,
+        // Straight to storage rather than through logService: the archived
+        // schedules already carry their own last-done dates, and replaying the
+        // history over them would only rewrite what is already correct.
+        saveServiceRecord: repository.saveServiceRecordRaw,
+      );
+      await ref.read(assetListProvider.notifier).loadAssets();
+      if (!context.mounted) return;
+      Navigator.pop(context); // busy
+
+      showDialog<void>(
+        context: context,
+        builder:
+            (ctx) => AlertDialog(
+              title: const Text('Restore complete'),
+              content: Text(
+                '${result.added} item${result.added == 1 ? '' : 's'} added, '
+                '${result.updated} updated, '
+                '${result.photosRestored} photo'
+                '${result.photosRestored == 1 ? '' : 's'} restored.\n\n'
+                'Nothing already on this device was removed.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+      );
+    } on BackupFormatException catch (e) {
+      if (!context.mounted) return;
+      Navigator.pop(context); // busy
+      _snack(context, e.message);
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.pop(context); // busy
+      _snack(context, 'Restore failed: $e');
+    }
+  }
+
+  /// Pro check and biometric prompt, in that order.
+  Future<bool> _allowed(
+    BuildContext context,
+    WidgetRef ref,
+    String reason,
+  ) async {
+    if (!ref.read(proProvider).isPro) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const PaywallScreen()),
+      );
+      return false;
+    }
+
+    if (ref.read(settingsProvider).isBiometricEnabled) {
+      try {
+        if (!await AuthService().authenticate(reason: reason)) return false;
+      } catch (_) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  void _showBusy(BuildContext context, String message) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (_) => PopScope(
+            canPop: false,
+            child: AlertDialog(
+              content: Row(
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(width: 20),
+                  Expanded(child: Text(message)),
+                ],
+              ),
+            ),
+          ),
+    );
+  }
+
+  void _snack(BuildContext context, String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Widget _buildSectionHeader(String title) {
@@ -307,6 +527,104 @@ class SettingsScreen extends ConsumerWidget {
         style: const TextStyle(
           color: AppTheme.textSecondary,
           fontSize: 13,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+}
+
+/// Asks for the policy's contents limit.
+///
+/// Stateful so the text controller dies with the dialog. Disposing it right
+/// after `showDialog` returns is too early: that future completes the moment
+/// pop is called, while the dialog is still animating out and its field is
+/// still reading the controller as it loses focus.
+class _CoverageLimitDialog extends StatefulWidget {
+  const _CoverageLimitDialog({
+    required this.initialValue,
+    required this.currencySymbol,
+  });
+
+  final String initialValue;
+  final String currencySymbol;
+
+  @override
+  State<_CoverageLimitDialog> createState() => _CoverageLimitDialogState();
+}
+
+class _CoverageLimitDialogState extends State<_CoverageLimitDialog> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initialValue,
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Contents Cover Limit'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'The most your policy pays out for belongings. Find it on '
+            'your schedule under contents.',
+            style: TextStyle(fontSize: 13, color: Colors.grey),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              prefixText: widget.currencySymbol,
+              hintText: 'Leave empty to remove',
+            ),
+            onSubmitted: (value) => Navigator.pop(context, value),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, _controller.text),
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Marks a row as something Pro unlocks, without disabling it.
+///
+/// The row still opens the paywall when tapped: a greyed-out control tells
+/// someone they cannot have it, where this tells them what it costs.
+class _ProChip extends StatelessWidget {
+  const _ProChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.purple.shade50,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.purple.shade100),
+      ),
+      child: const Text(
+        'PRO',
+        style: TextStyle(
+          color: Colors.purple,
+          fontSize: 11,
           fontWeight: FontWeight.bold,
         ),
       ),

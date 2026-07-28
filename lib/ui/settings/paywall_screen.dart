@@ -63,43 +63,48 @@ class PaywallScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Get unlimited access to all features with a one-time purchase.',
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                  'Recording and looking after your things is free, unlimited, '
+                  'and stays that way. Pro is for getting it back out.',
+                  style: TextStyle(fontSize: 15, color: Colors.grey),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
 
                 _buildBenefitItem(
-                  Icons.all_inclusive,
-                  'Unlimited Items',
-                  'Store as many items as you want.',
+                  Icons.description,
+                  'Insurance Report',
+                  'A page for every item — photos, serial number, receipt, '
+                      'service history and estimated current value, grouped by '
+                      'room and signed.',
                 ),
                 _buildBenefitItem(
-                  Icons.qr_code_scanner,
-                  'Unlimited AI Scans',
-                  'Scan barcodes and receipts without daily limits.',
-                ),
-                _buildBenefitItem(
-                  Icons.picture_as_pdf,
-                  'Pro PDF Reports',
-                  'Export detailed insurance reports.',
+                  Icons.save_alt,
+                  'Backup & Restore',
+                  'Every item, photo and year of service history in one file '
+                      'you keep. No account, no cloud, nothing leaves your '
+                      'device unless you send it.',
                 ),
                 _buildBenefitItem(
                   Icons.fingerprint,
                   'Biometric Lock',
-                  'Secure your inventory with FaceID/TouchID.',
-                ),
-                _buildBenefitItem(
-                  Icons.cloud_upload,
-                  'Image Backup',
-                  'Sync images to persistent storage.',
+                  'Keep the inventory behind FaceID or TouchID.',
                 ),
 
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
+
+                if (!proState.isStoreAvailable && !proState.isLoading)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 16),
+                    child: Text(
+                      'The store is unavailable right now. Please try again later.',
+                      style: TextStyle(color: Colors.redAccent),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
 
                 ElevatedButton(
                   onPressed:
-                      proState.isLoading
+                      proState.isLoading || !proState.isStoreAvailable
                           ? null
                           : () => proNotifier.purchasePro(),
                   style: ElevatedButton.styleFrom(
@@ -109,9 +114,13 @@ class PaywallScreen extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    'Upgrade for \$4.99',
-                    style: TextStyle(
+                  child: Text(
+                    // Priced by the store, so the figure is right in every
+                    // currency and stays right if the price ever changes.
+                    proState.priceString == null
+                        ? 'Upgrade'
+                        : 'Upgrade for ${proState.priceString}',
+                    style: const TextStyle(
                       fontSize: 18,
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -121,17 +130,20 @@ class PaywallScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed:
-                      proState.isLoading
+                      proState.isLoading || !proState.isStoreAvailable
                           ? null
                           : () => proNotifier.restorePurchases(),
                   child: const Text('Restore Purchases'),
                 ),
                 const SizedBox(height: 20),
-                const Text(
-                  'One-time purchase. No subscription.',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                  textAlign: TextAlign.center,
-                ),
+                if (proState.proPackage != null)
+                  Text(
+                    proState.isSubscription
+                        ? 'Renews automatically until cancelled. Manage or cancel any time in your account settings.'
+                        : 'One-time purchase. No subscription.',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
               ],
             ),
           ),
@@ -154,7 +166,7 @@ class PaywallScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.purple.withOpacity(0.1),
+              color: Colors.purple.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: Colors.purple),

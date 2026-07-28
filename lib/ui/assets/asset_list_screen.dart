@@ -2,16 +2,17 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:itemize/core/theme/app_theme.dart';
+import 'package:itemize/core/utils/image_storage.dart';
 import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/providers/asset_provider.dart';
 import 'package:itemize/providers/settings_provider.dart';
-import 'dart:io';
 import 'package:itemize/ui/assets/asset_detail_screen.dart';
 
 class AssetListScreen extends ConsumerStatefulWidget {
-  final String? category;
+  /// Shows only the items kept in this room, or every item when null.
+  final String? room;
 
-  const AssetListScreen({super.key, this.category});
+  const AssetListScreen({super.key, this.room});
 
   @override
   ConsumerState<AssetListScreen> createState() => _AssetListScreenState();
@@ -33,7 +34,7 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
       ref.read(assetListProvider.notifier).search(query);
     } else {
       _isSearching = false;
-      ref.refresh(assetListProvider); // Reload all
+      ref.invalidate(assetListProvider); // Reload all
     }
   }
 
@@ -42,7 +43,7 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
     final assetsAsync = ref.watch(assetListProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.category ?? 'Assets')),
+      appBar: AppBar(title: Text(widget.room ?? 'Assets')),
       body: Column(
         children: [
           Padding(
@@ -63,11 +64,9 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
                 // Since provider search is global in my impl, I'll filter result here.
 
                 var displayAssets = assets;
-                if (widget.category != null && !_isSearching) {
+                if (widget.room != null && !_isSearching) {
                   displayAssets =
-                      assets
-                          .where((a) => a.category == widget.category)
-                          .toList();
+                      assets.where((a) => a.room == widget.room).toList();
                 }
 
                 if (displayAssets.isEmpty) {
@@ -95,6 +94,7 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
 
   Widget _buildAssetItem(Asset asset, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
+    final thumbnail = ImageStorage.resolve(asset.imagePath);
     final bool isExpired =
         asset.warrantyExpiry != null &&
         asset.warrantyExpiry!.isBefore(DateTime.now());
@@ -123,15 +123,15 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
                 color: Colors.grey[200],
                 borderRadius: BorderRadius.circular(12),
                 image:
-                    asset.imagePath.isNotEmpty
+                    thumbnail != null
                         ? DecorationImage(
-                          image: FileImage(File(asset.imagePath)),
+                          image: FileImage(thumbnail),
                           fit: BoxFit.cover,
                         )
-                        : null, // Should use FileImage if local path
+                        : null,
               ),
               child:
-                  asset.imagePath.isEmpty
+                  thumbnail == null
                       ? const Icon(Icons.image, color: Colors.grey)
                       : null,
             ),
@@ -149,15 +149,19 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
                     ),
                   ),
                   Text(
-                    '${settings.currencySymbol}${asset.price.toStringAsFixed(2)}',
+                    settings.formatAmount(asset.price),
                     style: const TextStyle(
                       color: AppTheme.primaryBlue,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   Text(
-                    asset.category,
+                    // Both, because the list is reached from a room grid and
+                    // from a global search, and which one is the useful label
+                    // depends on which way they came in.
+                    '${asset.room} · ${asset.category}',
                     style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
