@@ -1220,4 +1220,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authToContinue => 'Please authenticate to continue';
+
+  @override
+  String get currencyChangeTitle => 'Change currency?';
+
+  @override
+  String get currencyChangeBody =>
+      'Amounts already recorded are not converted. They keep the figures you entered and will simply be shown with the new symbol.';
+
+  @override
+  String get changeAnyway => 'Change anyway';
+
+  @override
+  String restoreKeptNewer(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count items on this device were newer and were left as they are.',
+      one: '1 item on this device was newer and was left as it is.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get batchSaveFailed =>
+      'Could not save. Nothing was stored — your photos are still here, try again.';
 }

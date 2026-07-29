@@ -350,5 +350,10 @@
   "itemGymEquipment": "Sportgeräte",
   "itemLuggage": "Gepäck",
   "itemMusicalInstrument": "Musikinstrument",
-  "authToContinue": "Bitte authentifizieren Sie sich, um fortzufahren"
+  "authToContinue": "Bitte authentifizieren Sie sich, um fortzufahren",
+  "currencyChangeTitle": "Währung ändern?",
+  "currencyChangeBody": "Bereits erfasste Beträge werden nicht umgerechnet. Sie behalten die eingegebenen Zahlen und werden lediglich mit dem neuen Symbol angezeigt.",
+  "changeAnyway": "Trotzdem ändern",
+  "restoreKeptNewer": "{count, plural, =1{1 Eintrag auf diesem Gerät war neuer und blieb unverändert.} other{{count} Einträge auf diesem Gerät waren neuer und blieben unverändert.}}",
+  "batchSaveFailed": "Speichern fehlgeschlagen. Es wurde nichts gespeichert — deine Fotos sind noch da, versuche es erneut."
 }

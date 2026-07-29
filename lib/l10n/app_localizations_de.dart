@@ -1226,4 +1226,30 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get authToContinue =>
       'Bitte authentifizieren Sie sich, um fortzufahren';
+
+  @override
+  String get currencyChangeTitle => 'Währung ändern?';
+
+  @override
+  String get currencyChangeBody =>
+      'Bereits erfasste Beträge werden nicht umgerechnet. Sie behalten die eingegebenen Zahlen und werden lediglich mit dem neuen Symbol angezeigt.';
+
+  @override
+  String get changeAnyway => 'Trotzdem ändern';
+
+  @override
+  String restoreKeptNewer(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Einträge auf diesem Gerät waren neuer und blieben unverändert.',
+      one: '1 Eintrag auf diesem Gerät war neuer und blieb unverändert.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get batchSaveFailed =>
+      'Speichern fehlgeschlagen. Es wurde nichts gespeichert — deine Fotos sind noch da, versuche es erneut.';
 }

@@ -2211,6 +2211,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please authenticate to continue'**
   String get authToContinue;
+
+  /// No description provided for @currencyChangeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change currency?'**
+  String get currencyChangeTitle;
+
+  /// No description provided for @currencyChangeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Amounts already recorded are not converted. They keep the figures you entered and will simply be shown with the new symbol.'**
+  String get currencyChangeBody;
+
+  /// No description provided for @changeAnyway.
+  ///
+  /// In en, this message translates to:
+  /// **'Change anyway'**
+  String get changeAnyway;
+
+  /// No description provided for @restoreKeptNewer.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 item on this device was newer and was left as it is.} other{{count} items on this device were newer and were left as they are.}}'**
+  String restoreKeptNewer(int count);
+
+  /// No description provided for @batchSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save. Nothing was stored — your photos are still here, try again.'**
+  String get batchSaveFailed;
 }
 
 class _AppLocalizationsDelegate

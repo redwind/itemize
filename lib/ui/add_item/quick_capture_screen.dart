@@ -7,6 +7,7 @@ import 'package:itemize/core/utils/image_storage.dart';
 import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/providers/asset_provider.dart';
 import 'package:itemize/providers/settings_provider.dart';
+import 'package:itemize/ui/widgets/asset_thumbnail.dart';
 import 'package:uuid/uuid.dart';
 import 'package:itemize/l10n/app_localizations.dart';
 import 'package:itemize/l10n/domain_labels.dart';
@@ -105,8 +106,13 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
     final notifier = ref.read(assetListProvider.notifier);
     final now = DateTime.now();
 
-    for (final draft in ready) {
-      await notifier.addAsset(
+    // Written as one batch rather than one at a time. Each save reloads the
+    // whole table and rebuilds the reminder schedule from scratch, so saving a
+    // forty-item room item by item meant forty reloads and some two thousand
+    // platform calls -- and left the room half-stored if anything failed
+    // part-way.
+    final saved = await notifier.addAssets([
+      for (final draft in ready)
         Asset(
           id: const Uuid().v4(),
           name: draft.name.text.trim(),
@@ -128,10 +134,22 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
           // go back and check.
           lastReviewedAt: now,
         ),
-      );
-    }
+    ]);
 
     if (!mounted) return;
+
+    // Nothing was stored, so nothing is cleared. The drafts and their
+    // photographs stay exactly where they were and the owner can try again,
+    // rather than being congratulated on a room that was never saved.
+    if (!saved) {
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.batchSaveFailed),
+        ),
+      );
+      return;
+    }
 
     final leftover = _drafts.length - ready.length;
     setState(() {
@@ -324,7 +342,12 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
     AppLocalizations l10n,
   ) {
     final draft = _drafts[index];
-    final file = ImageStorage.resolve(draft.photoPath);
+    final thumbnail = AssetThumbnail.provider(
+      context,
+      draft.photoPath,
+      width: 72,
+      height: 72,
+    );
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -336,11 +359,8 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
             color: Colors.grey[200],
             borderRadius: BorderRadius.circular(12),
             image:
-                file != null
-                    ? DecorationImage(
-                      image: FileImage(file),
-                      fit: BoxFit.cover,
-                    )
+                thumbnail != null
+                    ? DecorationImage(image: thumbnail, fit: BoxFit.cover)
                     : null,
           ),
         ),

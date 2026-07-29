@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:itemize/core/utils/asset_search.dart';
 import 'package:itemize/data/database/database_helper.dart';
 import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/data/repositories/asset_repository.dart';
@@ -73,27 +74,21 @@ void main() {
       expect(container.read(depreciationProvider).totalPaid, 2200);
     });
 
-    test('a search on the Assets tab does not move the total value', () async {
-      await container.read(assetListProvider.notifier).search('Television');
+    test('what a screen displays is not what the providers report', () async {
+      final all = await container.read(allAssetsProvider.future);
 
-      // The Assets tab is showing one item, as it should.
-      expect(container.read(assetListProvider).value, hasLength(1));
+      // What the Assets tab shows while a query is typed into it.
+      expect(filterAssets(all, 'Television'), hasLength(1));
+      expect(filterAssets(all, 'zzzzz'), isEmpty);
 
-      await container.read(allAssetsProvider.future);
+      // And what everything else still reports. Filtering is a view over the
+      // list rather than a replacement of it -- when searching was a method on
+      // the notifier it rewrote this shared state, and the headline total
+      // became the value of the televisions, or zero.
       expect(container.read(totalValueProvider), 2200);
       expect(container.read(assetCountProvider), 3);
       expect(container.read(depreciationProvider).totalPaid, 2200);
-    });
-
-    test('a search that matches nothing does not empty the dashboard',
-        () async {
-      await container.read(assetListProvider.notifier).search('zzzzz');
-
-      expect(container.read(assetListProvider).value, isEmpty);
-
-      await container.read(allAssetsProvider.future);
-      expect(container.read(totalValueProvider), 2200);
-      expect(container.read(assetCountProvider), 3);
+      expect(container.read(assetListProvider).value, hasLength(3));
     });
 
     test('adding an item still moves the total', () async {

@@ -4,12 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:itemize/core/theme/app_theme.dart';
 import 'package:itemize/core/utils/depreciation.dart';
-import 'package:itemize/core/utils/image_storage.dart';
 import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/providers/asset_provider.dart';
 import 'package:itemize/providers/settings_provider.dart';
 import 'package:itemize/ui/add_item/add_item_screen.dart';
 import 'package:itemize/ui/care/asset_care_screen.dart';
+import 'package:itemize/ui/widgets/asset_thumbnail.dart';
 import 'package:itemize/l10n/app_localizations.dart';
 import 'package:itemize/l10n/domain_labels.dart';
 
@@ -343,19 +343,29 @@ class _AssetDetailScreenState extends ConsumerState<AssetDetailScreen> {
       );
     }
 
+    // Matches the SliverAppBar's expandedHeight above, which is what this
+    // pager actually fills.
+    final width = MediaQuery.of(context).size.width;
+    final height = width * 0.9;
+
     return PageView.builder(
       controller: _photoController,
       itemCount: photos.length,
       onPageChanged: (i) => setState(() => _photoIndex = i),
       itemBuilder: (context, index) {
-        final file = ImageStorage.resolve(photos[index]);
-        if (file == null) {
+        final image = AssetThumbnail.provider(
+          context,
+          photos[index],
+          width: width,
+          height: height,
+        );
+        if (image == null) {
           return Container(
             color: Colors.grey[200],
             child: const Icon(Icons.broken_image, size: 80, color: Colors.grey),
           );
         }
-        return Image.file(file, fit: BoxFit.cover);
+        return Image(image: image, fit: BoxFit.cover);
       },
     );
   }
@@ -379,8 +389,17 @@ class _AssetDetailScreenState extends ConsumerState<AssetDetailScreen> {
   }
 
   Widget _buildReceipt(AppLocalizations l10n) {
-    final file = ImageStorage.resolve(_currentAsset.receiptPath);
-    if (file == null) return const SizedBox.shrink();
+    // The Image below is laid out at the full content width (double.infinity
+    // grows to it), so that -- not the fixed height -- is what the decode
+    // needs to match to avoid both over- and under-sizing it.
+    final image = AssetThumbnail.provider(
+      context,
+      _currentAsset.receiptPath,
+      width: MediaQuery.of(context).size.width - 32,
+      height: 220,
+      fit: BoxFit.contain,
+    );
+    if (image == null) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -398,8 +417,8 @@ class _AssetDetailScreenState extends ConsumerState<AssetDetailScreen> {
         const SizedBox(height: 8),
         ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: Image.file(
-            file,
+          child: Image(
+            image: image,
             height: 220,
             width: double.infinity,
             // A till roll is far taller than it is wide, so cropping it to the

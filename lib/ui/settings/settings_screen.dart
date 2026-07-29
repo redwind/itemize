@@ -134,12 +134,12 @@ class SettingsScreen extends ConsumerWidget {
               underline: const SizedBox(),
               icon: const Icon(Icons.arrow_drop_down),
               onChanged: (String? newValue) {
-                if (newValue != null) {
-                  settingsNotifier.setCurrency(newValue);
+                if (newValue != null && newValue != settings.currencyCode) {
+                  _changeCurrency(context, ref, newValue);
                 }
               },
               items:
-                  ['USD', 'EUR', 'GBP', 'VND'].map<DropdownMenuItem<String>>((
+                  kSupportedCurrencies.map<DropdownMenuItem<String>>((
                     String value,
                   ) {
                     return DropdownMenuItem<String>(
@@ -338,6 +338,44 @@ class SettingsScreen extends ConsumerWidget {
         );
   }
 
+  /// Applies a currency change, warning first when it would relabel real data.
+  ///
+  /// Real conversion is out of scope, so switching currency with items already
+  /// on file just puts a new symbol on the same digits. That is only honest
+  /// with the owner's sign-off, hence the dialog — but an empty inventory has
+  /// nothing to mislabel, so it applies straight away.
+  Future<void> _changeCurrency(
+    BuildContext context,
+    WidgetRef ref,
+    String newValue,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    if (ref.read(assetCountProvider) > 0) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder:
+            (ctx) => AlertDialog(
+              title: Text(l10n.currencyChangeTitle),
+              content: Text(l10n.currencyChangeBody),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: Text(l10n.cancel),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: Text(l10n.changeAnyway),
+                ),
+              ],
+            ),
+      );
+      if (confirmed != true) return;
+    }
+
+    if (!context.mounted) return;
+    await ref.read(settingsProvider.notifier).setCurrency(newValue);
+  }
+
   /// Opens the report preview.
   ///
   /// Free users get here too, and get the summary report — the paywall is the
@@ -453,7 +491,7 @@ class SettingsScreen extends ConsumerWidget {
         builder:
             (ctx) => AlertDialog(
               title: Text(l10n.restoreCompleteTitle),
-              content: Text(
+              content: Text([
                 l10n.restoreCompleteBody(
                   result.added,
                   result.updated,
@@ -461,7 +499,10 @@ class SettingsScreen extends ConsumerWidget {
                   result.schedulesRestored,
                   result.recordsRestored,
                 ),
-              ),
+                // Said out loud, because silence here reads as "everything in
+                // the backup was applied" when some of it deliberately was not.
+                if (result.keptNewer > 0) l10n.restoreKeptNewer(result.keptNewer),
+              ].join('\n\n')),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),

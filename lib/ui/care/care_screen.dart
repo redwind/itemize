@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:itemize/core/theme/app_theme.dart';
-import 'package:itemize/core/utils/image_storage.dart';
 import 'package:itemize/core/utils/maintenance_planner.dart';
 import 'package:itemize/core/utils/review_status.dart';
 import 'package:itemize/core/utils/warranty_status.dart';
@@ -11,6 +10,7 @@ import 'package:itemize/providers/asset_provider.dart';
 import 'package:itemize/providers/settings_provider.dart';
 import 'package:itemize/ui/assets/asset_detail_screen.dart';
 import 'package:itemize/ui/care/asset_care_screen.dart';
+import 'package:itemize/ui/widgets/asset_thumbnail.dart';
 import 'package:itemize/l10n/app_localizations.dart';
 import 'package:itemize/l10n/domain_labels.dart';
 
@@ -455,7 +455,12 @@ class _CareScreenState extends ConsumerState<CareScreen> {
 
   Widget _buildRow(Asset asset, AppLocalizations l10n) {
     final days = WarrantyStatus.daysRemaining(asset);
-    final thumbnail = ImageStorage.resolve(asset.imagePath);
+    final thumbnail = AssetThumbnail.provider(
+      context,
+      asset.imagePath,
+      width: 48,
+      height: 48,
+    );
     final standing = WarrantyStatus.of(asset);
 
     return GestureDetector(
@@ -480,10 +485,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
                 borderRadius: BorderRadius.circular(10),
                 image:
                     thumbnail != null
-                        ? DecorationImage(
-                          image: FileImage(thumbnail),
-                          fit: BoxFit.cover,
-                        )
+                        ? DecorationImage(image: thumbnail, fit: BoxFit.cover)
                         : null,
               ),
               child:

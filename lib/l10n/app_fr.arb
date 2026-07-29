@@ -350,5 +350,10 @@
   "itemGymEquipment": "Équipement de sport",
   "itemLuggage": "Bagages",
   "itemMusicalInstrument": "Instrument de musique",
-  "authToContinue": "Veuillez vous authentifier pour continuer"
+  "authToContinue": "Veuillez vous authentifier pour continuer",
+  "currencyChangeTitle": "Changer de devise ?",
+  "currencyChangeBody": "Les montants déjà saisis ne sont pas convertis. Ils conservent les chiffres que vous avez entrés et seront simplement affichés avec le nouveau symbole.",
+  "changeAnyway": "Changer quand même",
+  "restoreKeptNewer": "{count, plural, =1{1 objet sur cet appareil était plus récent et a été conservé tel quel.} other{{count} objets sur cet appareil étaient plus récents et ont été conservés tels quels.}}",
+  "batchSaveFailed": "Enregistrement impossible. Rien n'a été stocké — vos photos sont toujours là, réessayez."
 }

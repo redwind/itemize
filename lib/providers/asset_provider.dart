@@ -143,6 +143,31 @@ class AssetListNotifier extends StateNotifier<AsyncValue<List<Asset>>> {
     }
   }
 
+  /// Stores a whole batch and reloads once.
+  ///
+  /// Quick Capture saves a photographed room in one go. Looping [addAsset]
+  /// meant a full table reload and a complete reminder resync -- cancel
+  /// everything, then re-schedule up to sixty notifications -- for each item in
+  /// turn, so a forty-item room cost forty reloads and some two thousand
+  /// platform calls while the owner watched a progress bar. The batch is
+  /// written in one transaction, so a room is saved whole or not at all.
+  ///
+  /// Returns whether it was stored. The caller has to know: nothing else on
+  /// screen reads this notifier's error state any more, so a failure that only
+  /// went into the state would leave the owner looking at a success message
+  /// for a room that was never saved.
+  Future<bool> addAssets(List<Asset> assets) async {
+    if (assets.isEmpty) return true;
+    try {
+      await _repository.addAssets(assets);
+      await loadAssets();
+      return true;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return false;
+    }
+  }
+
   /// Records that the owner has confirmed this entry is still true.
   Future<void> markReviewed(Asset asset) =>
       updateAsset(asset.copyWith(lastReviewedAt: DateTime.now()));
@@ -191,13 +216,12 @@ class AssetListNotifier extends StateNotifier<AsyncValue<List<Asset>>> {
     }
   }
 
-  Future<void> search(String query) async {
-    try {
-      // Optimistic filtering or DB query
-      final assets = await _repository.searchAssets(query);
-      state = AsyncValue.data(assets);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
-  }
+  // There is deliberately no search() here any more.
+  //
+  // It replaced the shared state with a narrowed list, which is a screen's
+  // display decision written into everybody's data: the tabs are held alive by
+  // an IndexedStack, so a query typed on the Assets tab followed the user to
+  // the dashboard and to the room drill-down. Filtering now happens where it
+  // is displayed, over the list this notifier already provides. See
+  // `assetMatchesQuery` in core/utils/asset_search.dart.
 }

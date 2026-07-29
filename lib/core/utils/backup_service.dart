@@ -27,6 +27,7 @@ class BackupImportResult {
   final int schedulesRestored;
   final int recordsRestored;
   final DateTime? exportedAt;
+  final int keptNewer;
 
   const BackupImportResult({
     required this.added,
@@ -35,6 +36,7 @@ class BackupImportResult {
     this.schedulesRestored = 0,
     this.recordsRestored = 0,
     this.exportedAt,
+    this.keptNewer = 0,
   });
 
   int get total => added + updated;
@@ -60,6 +62,13 @@ class BackupService {
   ///
   /// v2 added maintenance schedules and service history. A v1 archive restores
   /// fine — it simply has none — so the two are read by the same code.
+  ///
+  /// Not bumped for the fix that normalises every archived photo path to
+  /// `images/<basename>`: that is the shape every archive has always used for
+  /// photos saved through [ImageStorage], so an older app reading a freshly
+  /// exported archive sees nothing new. Only the manifest strings for rows
+  /// that still carried a pre-migration absolute path change, and those rows
+  /// were unreadable on import before this fix anyway.
   static const int formatVersion = 2;
 
   static const String _manifestName = 'inventory.json';
@@ -75,32 +84,65 @@ class BackupService {
     List<MaintenanceSchedule> schedules = const [],
     List<ServiceRecord> serviceRecords = const [],
   }) async {
-    final manifest = jsonEncode({
-      'format': _formatTag,
-      'version': formatVersion,
-      'exportedAt': DateTime.now().toIso8601String(),
-      'itemCount': assets.length,
-      'assets': assets.map((a) => a.toMap()).toList(),
-      // Years of servicing history is the part that cannot be reconstructed
-      // from memory, so a backup that left it behind would be the wrong half.
-      'schedules': schedules.map((s) => s.toMap()).toList(),
-      'serviceRecords': serviceRecords.map((r) => r.toMap()).toList(),
-    });
-
     // Resolved here rather than in the isolate: ImageStorage keeps the
     // documents directory in static state that a spawned isolate would not
     // inherit.
+    //
+    // Keyed by archive entry name rather than by the stored path: rows from
+    // before the multi-photo migration hold an absolute path baked against a
+    // sandbox container that no longer exists on restore, and `_readArchive`
+    // only ever unpacks entries under `images/`. Writing every photo under
+    // `images/<basename>` — the same shape new photos already use — means a
+    // legacy row's picture is actually there to unpack instead of being
+    // zipped in under a name nothing will ever read back out.
     final photos = <String, String>{};
+    final archiveNameByStoredPath = <String, String>{};
+    final usedArchiveNames = <String>{};
+
     void include(String? stored) {
-      if (stored == null || stored.isEmpty || photos.containsKey(stored)) return;
+      if (stored == null || stored.isEmpty || archiveNameByStoredPath.containsKey(stored)) {
+        return;
+      }
       final file = ImageStorage.resolve(stored);
-      if (file != null && file.existsSync()) photos[stored] = file.path;
+      if (file == null || !file.existsSync()) return;
+
+      final basename = stored.split('/').last;
+      final entryName = 'images/${_uniqueArchiveName(basename, usedArchiveNames)}';
+      archiveNameByStoredPath[stored] = entryName;
+      photos[entryName] = file.path;
     }
 
     for (final asset in assets) {
       asset.photoPaths.forEach(include);
       include(asset.receiptPath);
     }
+
+    // A fresh copy per asset, never the caller's own list/object: the manifest
+    // has to point at the relative name each photo was actually archived
+    // under, but nothing else in the app should see its in-memory assets grow
+    // an `images/` path it never asked to be given.
+    String? translate(String? stored) =>
+        stored == null ? null : (archiveNameByStoredPath[stored] ?? stored);
+    final assetsForManifest = assets
+        .map(
+          (a) => a.copyWith(
+            photoPaths: a.photoPaths.map((p) => archiveNameByStoredPath[p] ?? p).toList(),
+            receiptPath: translate(a.receiptPath),
+          ),
+        )
+        .toList();
+
+    final manifest = jsonEncode({
+      'format': _formatTag,
+      'version': formatVersion,
+      'exportedAt': DateTime.now().toIso8601String(),
+      'itemCount': assets.length,
+      'assets': assetsForManifest.map((a) => a.toMap()).toList(),
+      // Years of servicing history is the part that cannot be reconstructed
+      // from memory, so a backup that left it behind would be the wrong half.
+      'schedules': schedules.map((s) => s.toMap()).toList(),
+      'serviceRecords': serviceRecords.map((r) => r.toMap()).toList(),
+    });
 
     final directory = await Directory.systemTemp.createTemp('itemize_backup');
     final stamp = DateFormat('yyyy-MM-dd').format(DateTime.now());
@@ -120,7 +162,11 @@ class BackupService {
   /// Items are matched on id and overwritten; anything not in the archive is
   /// left alone. Restoring is therefore a merge, never a wipe — someone
   /// restoring an old backup onto a phone they have kept using does not lose
-  /// what they added in between.
+  /// what they added in between. That includes edits made after the backup
+  /// was taken: a row is only overwritten when the archive's copy is not
+  /// older than the local one, so a six-month-old backup cannot silently
+  /// revert everything changed since. Rows kept for this reason are counted
+  /// in [BackupImportResult.keptNewer].
   Future<BackupImportResult> import(
     String archivePath, {
     required Future<Asset?> Function(String id) findExisting,
@@ -173,6 +219,7 @@ class BackupService {
 
     var added = 0;
     var updated = 0;
+    var keptNewer = 0;
     for (final row in rows) {
       if (row is! Map) continue;
       final Asset asset;
@@ -184,12 +231,15 @@ class BackupService {
         continue;
       }
 
-      if (await findExisting(asset.id) != null) {
-        await updateAsset(asset);
-        updated++;
-      } else {
+      final existing = await findExisting(asset.id);
+      if (existing == null) {
         await addAsset(asset);
         added++;
+      } else if (_localIsNewer(existing.lastReviewedAt, asset.lastReviewedAt)) {
+        keptNewer++;
+      } else {
+        await updateAsset(asset);
+        updated++;
       }
     }
 
@@ -215,7 +265,24 @@ class BackupService {
       schedulesRestored: schedulesRestored,
       recordsRestored: recordsRestored,
       exportedAt: exportedAt,
+      keptNewer: keptNewer,
     );
+  }
+
+  /// Whether the row already on the device should win over the archive's.
+  ///
+  /// A null local date means the item has never been reviewed since being
+  /// added, which is not a signal worth protecting — the backup overwrites
+  /// it. A null archive date, on the other hand, must never beat a real local
+  /// one: it means the archive is old enough to predate review tracking, and
+  /// treating "unknown" as "newer" would let every such backup wipe out
+  /// edits made since. A tie goes to the archive, so a restore still does
+  /// something when both sides were reviewed at the same moment (typically:
+  /// neither ever was).
+  bool _localIsNewer(DateTime? local, DateTime? archived) {
+    if (local == null) return false;
+    if (archived == null) return true;
+    return local.isAfter(archived);
   }
 
   /// Restores one of the child collections, skipping anything unreadable.
@@ -240,6 +307,30 @@ class BackupService {
   }
 }
 
+/// Picks an archive name for [basename], appending `-2`, `-3`, ... the first
+/// time it collides with one already handed out.
+///
+/// Legacy rows carried an absolute path rooted in whichever directory the
+/// photo happened to be picked from, so two different assets can perfectly
+/// well share a basename (camera-roll exports love `IMG_0001.jpg`). Writing
+/// both under the same archive entry would let the second silently overwrite
+/// the first inside the zip.
+String _uniqueArchiveName(String basename, Set<String> used) {
+  if (used.add(basename)) return basename;
+
+  final dot = basename.lastIndexOf('.');
+  final stem = dot > 0 ? basename.substring(0, dot) : basename;
+  final extension = dot > 0 ? basename.substring(dot) : '';
+
+  var suffix = 2;
+  var candidate = '$stem-$suffix$extension';
+  while (!used.add(candidate)) {
+    suffix++;
+    candidate = '$stem-$suffix$extension';
+  }
+  return candidate;
+}
+
 /// Runs in a background isolate: zips the manifest and every photo.
 void _writeArchive(Map<String, Object> args) {
   final target = args['target'] as String;
@@ -256,12 +347,13 @@ void _writeArchive(Map<String, Object> args) {
     ),
   );
 
-  photos.forEach((stored, absolute) {
+  photos.forEach((entryName, absolute) {
     try {
       final bytes = File(absolute).readAsBytesSync();
-      // Stored under the very path the items refer to, so a restore can put
-      // each file back where its item expects to find it.
-      archive.addFile(ArchiveFile(stored, bytes.length, bytes));
+      // The key is already the `images/<basename>` name the manifest was
+      // rewritten to point at, so a restore can put each file back where its
+      // item now expects to find it, legacy absolute paths included.
+      archive.addFile(ArchiveFile(entryName, bytes.length, bytes));
     } catch (_) {
       // A photo that has gone missing is not a reason to refuse the backup.
     }

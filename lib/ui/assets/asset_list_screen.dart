@@ -2,11 +2,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:itemize/core/theme/app_theme.dart';
-import 'package:itemize/core/utils/image_storage.dart';
+import 'package:itemize/core/utils/asset_search.dart';
 import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/providers/asset_provider.dart';
 import 'package:itemize/providers/settings_provider.dart';
 import 'package:itemize/ui/assets/asset_detail_screen.dart';
+import 'package:itemize/ui/widgets/asset_thumbnail.dart';
 import 'package:itemize/l10n/app_localizations.dart';
 import 'package:itemize/l10n/domain_labels.dart';
 
@@ -22,7 +23,14 @@ class AssetListScreen extends ConsumerStatefulWidget {
 
 class _AssetListScreenState extends ConsumerState<AssetListScreen> {
   final TextEditingController _searchController = TextEditingController();
-  bool _isSearching = false;
+
+  /// This screen's own query, and nothing else's.
+  ///
+  /// Two of these screens exist over one provider -- the Assets tab and the
+  /// room drill-down from the dashboard -- and searching used to narrow the
+  /// shared state. So a search run in one room followed the user back to the
+  /// tab, which then showed a filtered list with an empty search box.
+  String _query = '';
 
   @override
   void dispose() {
@@ -30,19 +38,11 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
     super.dispose();
   }
 
-  void _onSearchChanged(String query) {
-    if (query.isNotEmpty) {
-      _isSearching = true;
-      ref.read(assetListProvider.notifier).search(query);
-    } else {
-      _isSearching = false;
-      ref.invalidate(assetListProvider); // Reload all
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final assetsAsync = ref.watch(assetListProvider);
+    // Every stored item. What this screen shows is decided below, in this
+    // screen, rather than by rewriting the list everything else reads from.
+    final assetsAsync = ref.watch(allAssetsProvider);
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
@@ -57,24 +57,21 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
             padding: const EdgeInsets.all(16.0),
             child: CupertinoSearchTextField(
               controller: _searchController,
-              onChanged: _onSearchChanged,
+              onChanged: (query) => setState(() => _query = query),
               placeholder: l10n.searchPlaceholder,
             ),
           ),
           Expanded(
             child: assetsAsync.when(
               data: (assets) {
-                // Filter by category if provided and not searching (search usually global, or scoped?)
-                // Assuming scoped search if category present logic is complex, for now global search defaults,
-                // but if category is strictly set, we should filter memory or initial query.
-                // Simplified: If category is set, filter the list from provider unless provider handles it.
-                // Since provider search is global in my impl, I'll filter result here.
-
-                var displayAssets = assets;
-                if (widget.room != null && !_isSearching) {
-                  displayAssets =
-                      assets.where((a) => a.room == widget.room).toList();
-                }
+                // The room narrows the list first and stays applied while
+                // searching. Searching inside "Garage" used to return matches
+                // from the whole house under a heading that said Garage.
+                final inRoom =
+                    widget.room == null
+                        ? assets
+                        : assets.where((a) => a.room == widget.room).toList();
+                final displayAssets = filterAssets(inRoom, _query);
 
                 if (displayAssets.isEmpty) {
                   return Center(child: Text(l10n.noAssetsFound));
@@ -101,7 +98,12 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
 
   Widget _buildAssetItem(Asset asset, WidgetRef ref, AppLocalizations l10n) {
     final settings = ref.watch(settingsProvider);
-    final thumbnail = ImageStorage.resolve(asset.imagePath);
+    final thumbnail = AssetThumbnail.provider(
+      context,
+      asset.imagePath,
+      width: 60,
+      height: 60,
+    );
     final bool isExpired =
         asset.warrantyExpiry != null &&
         asset.warrantyExpiry!.isBefore(DateTime.now());
@@ -131,10 +133,7 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
                 borderRadius: BorderRadius.circular(12),
                 image:
                     thumbnail != null
-                        ? DecorationImage(
-                          image: FileImage(thumbnail),
-                          fit: BoxFit.cover,
-                        )
+                        ? DecorationImage(image: thumbnail, fit: BoxFit.cover)
                         : null,
               ),
               child:

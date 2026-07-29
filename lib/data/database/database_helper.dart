@@ -170,6 +170,23 @@ CREATE TABLE service_records (
     return await db.insert('assets', asset.toMap());
   }
 
+  /// Inserts a whole batch in one transaction, so a Quick Capture room either
+  /// lands entirely or not at all instead of leaving half the photographs
+  /// saved after one bad row.
+  ///
+  /// Same conflict behaviour as [create] (throws on a duplicate id) rather
+  /// than [upsert]'s replace: a batch insert is new items being added, not a
+  /// restore replaying something that may already be there.
+  Future<void> createAll(List<Asset> assets) async {
+    if (assets.isEmpty) return;
+    final db = await database;
+    await db.transaction((txn) async {
+      for (final asset in assets) {
+        await txn.insert('assets', asset.toMap());
+      }
+    });
+  }
+
   /// Writes an asset whether or not it is already there.
   ///
   /// Used by the undo, where a plain insert throws on the second attempt. That

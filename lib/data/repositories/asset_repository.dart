@@ -13,6 +13,12 @@ class AssetRepository {
     await _dbHelper.create(asset);
   }
 
+  /// Saves a Quick Capture room in one go instead of one reload-and-resync
+  /// per photo.
+  Future<void> addAssets(List<Asset> assets) async {
+    await _dbHelper.createAll(assets);
+  }
+
   Future<List<Asset>> getAllAssets() async {
     return await _dbHelper.readAllAssets();
   }
@@ -134,27 +140,11 @@ class AssetRepository {
   }
 
   // Basic search implementation (can be improved with SQL LIKE)
-  Future<List<Asset>> searchAssets(String query) async {
-    final allAssets = await getAllAssets();
-    if (query.isEmpty) return allAssets;
-
-    final lowerQuery = query.toLowerCase();
-    return allAssets.where((asset) {
-      // Serial and model are searched too: hunting down one specific unit --
-      // which is what someone does mid-claim -- is done by the number on it,
-      // not by a name they may have typed inconsistently.
-      return [
-        asset.name,
-        asset.room,
-        asset.category,
-        asset.brand,
-        asset.model,
-        asset.serialNumber,
-      ].any(
-        (field) => field != null && field.toLowerCase().contains(lowerQuery),
-      );
-    }).toList();
-  }
+  // Searching lives in core/utils/asset_search.dart, not here.
+  //
+  // The screens hold the whole list already, so asking storage again on every
+  // keystroke bought nothing, and having the repository answer queries is what
+  // led to search results being written back into the shared asset list.
 }
 
 /// An item and everything that hung off it, held long enough to change your

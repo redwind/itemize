@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -95,6 +97,17 @@ class AppSettings {
         return '£';
       case 'VND':
         return '₫';
+      case 'CHF':
+        return 'CHF';
+      // Prefixed rather than a bare '$': next to USD in the same picker, an
+      // unqualified dollar sign would read as the currency this app used to
+      // default everyone to, which is exactly the confusion this fixes.
+      case 'CAD':
+        return 'CA\$';
+      case 'AUD':
+        return 'A\$';
+      case 'NZD':
+        return 'NZ\$';
       case 'USD':
       default:
         return '\$';
@@ -144,6 +157,88 @@ const Map<String, String> kLanguageNames = {
 String resolveLanguage(String? stored) =>
     kSupportedLanguages.contains(stored) ? stored! : 'en';
 
+/// Currencies the picker offers.
+///
+/// Must cover everything [currencyForRegion] can hand back as a first-run
+/// default, or a device landing on one of them finds a dropdown that throws
+/// on its own value instead of showing it.
+const List<String> kSupportedCurrencies = [
+  'USD',
+  'EUR',
+  'GBP',
+  'CHF',
+  'CAD',
+  'AUD',
+  'NZD',
+  'VND',
+];
+
+/// ISO region → the currency someone there actually spends.
+///
+/// Covers the countries this app is sold into plus the eurozone, since a
+/// French or German buyer is the whole reason the old hardcoded USD default
+/// was wrong. Deliberately not exhaustive: anything missing here falls back
+/// to USD in [currencyForRegion] rather than needing to be listed.
+const Map<String, String> _regionCurrency = {
+  'DE': 'EUR',
+  'FR': 'EUR',
+  'AT': 'EUR',
+  'BE': 'EUR',
+  'NL': 'EUR',
+  'ES': 'EUR',
+  'IT': 'EUR',
+  'IE': 'EUR',
+  'FI': 'EUR',
+  'PT': 'EUR',
+  'GR': 'EUR',
+  'LU': 'EUR',
+  'SK': 'EUR',
+  'SI': 'EUR',
+  'EE': 'EUR',
+  'LV': 'EUR',
+  'LT': 'EUR',
+  'CY': 'EUR',
+  'MT': 'EUR',
+  'GB': 'GBP',
+  'CH': 'CHF',
+  'LI': 'CHF',
+  'US': 'USD',
+  'CA': 'CAD',
+  'AU': 'AUD',
+  'NZ': 'NZD',
+  'VN': 'VND',
+};
+
+/// Region → currency default, falling back to USD.
+///
+/// USD rather than throwing or returning null: an unrecognised region is the
+/// common case (a device that reports no region, a country this list hasn't
+/// caught up with), and the old behaviour — always USD — is the correct
+/// degradation for it, not a crash on first launch.
+String currencyForRegion(String? region) =>
+    _regionCurrency[region?.toUpperCase()] ?? 'USD';
+
+/// Pulls the region out of a platform locale name, or null if there isn't one.
+///
+/// `Platform.localeName` isn't standardised across OSes or even consistent on
+/// one: it shows up as `de_DE.UTF-8`, `de-DE`, or a bare `de` with no region
+/// at all when the OS doesn't report one. All three are handled here so the
+/// caller never has to guess at the separator or the encoding suffix.
+String? regionFromLocaleName(String localeName) {
+  final withoutEncoding = localeName.split('.').first;
+  final parts = withoutEncoding.split(RegExp(r'[_-]'));
+  return parts.length >= 2 && parts[1].isNotEmpty ? parts[1] : null;
+}
+
+/// The currency a fresh install should start with, going by device locale.
+///
+/// Platform-free on purpose: [regionFromLocaleName] and [currencyForRegion]
+/// are the parts worth getting right and worth testing without a device;
+/// this just wires them together for the one caller that has a locale string
+/// to hand it.
+String currencyForLocaleName(String localeName) =>
+    currencyForRegion(regionFromLocaleName(localeName));
+
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   throw UnimplementedError();
 });
@@ -162,7 +257,12 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
           coverageLimit: prefs.getDouble('coverageLimit') ?? 0,
           lastBackupAt: DateTime.tryParse(prefs.getString('lastBackupAt') ?? ''),
           hasOnboarded: prefs.getBool('hasOnboarded') ?? false,
-          currencyCode: prefs.getString('currencyCode') ?? 'USD',
+          // Device locale only on first run: once a currency is on disk,
+          // that is the owner's word for it, even if they later travel or
+          // change the phone's region.
+          currencyCode:
+              prefs.getString('currencyCode') ??
+              currencyForLocaleName(Platform.localeName),
           // Sanitised on read: anyone carrying 'vi', 'fr' or 'de' from an
           // earlier build lands on English rather than on a half-translated
           // screen.

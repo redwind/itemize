@@ -702,5 +702,17 @@
   "itemGymEquipment": "Gym Equipment",
   "itemLuggage": "Luggage",
   "itemMusicalInstrument": "Musical Instrument",
-  "authToContinue": "Please authenticate to continue"
+  "authToContinue": "Please authenticate to continue",
+  "currencyChangeTitle": "Change currency?",
+  "currencyChangeBody": "Amounts already recorded are not converted. They keep the figures you entered and will simply be shown with the new symbol.",
+  "changeAnyway": "Change anyway",
+  "restoreKeptNewer": "{count, plural, =1{1 item on this device was newer and was left as it is.} other{{count} items on this device were newer and were left as they are.}}",
+  "@restoreKeptNewer": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchSaveFailed": "Could not save. Nothing was stored — your photos are still here, try again."
 }

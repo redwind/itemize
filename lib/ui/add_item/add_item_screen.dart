@@ -15,6 +15,7 @@ import 'package:itemize/l10n/domain_labels.dart';
 import 'package:itemize/providers/asset_provider.dart';
 import 'package:itemize/providers/settings_provider.dart';
 import 'package:itemize/ui/add_item/asset_library_screen.dart';
+import 'package:itemize/ui/widgets/asset_thumbnail.dart';
 import 'package:uuid/uuid.dart';
 
 enum _PhotoAction { camera, gallery, catalog }
@@ -832,7 +833,12 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
   }
 
   Widget _buildPhotoTile(int index, double size, AppLocalizations l10n) {
-    final file = ImageStorage.resolve(_photoPaths[index]);
+    final image = AssetThumbnail.provider(
+      context,
+      _photoPaths[index],
+      width: size,
+      height: size,
+    );
 
     return GestureDetector(
       onTap: () => _tapPhoto(index),
@@ -845,15 +851,12 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
               color: Colors.grey[200],
               borderRadius: BorderRadius.circular(16),
               image:
-                  file != null
-                      ? DecorationImage(
-                        image: FileImage(file),
-                        fit: BoxFit.cover,
-                      )
+                  image != null
+                      ? DecorationImage(image: image, fit: BoxFit.cover)
                       : null,
             ),
             child:
-                file == null
+                image == null
                     ? const Icon(Icons.broken_image, color: Colors.grey)
                     : null,
           ),

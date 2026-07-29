@@ -32,6 +32,7 @@ Asset asset({
   String? serialNumber,
   String? notes,
   DateTime? warrantyExpiry,
+  DateTime? lastReviewedAt,
 }) => Asset(
   id: id,
   name: name,
@@ -49,6 +50,7 @@ Asset asset({
   purchaseDate: DateTime(2024, 3, 1),
   warrantyExpiry: warrantyExpiry,
   isFavorite: true,
+  lastReviewedAt: lastReviewedAt,
 );
 
 void main() {
@@ -175,6 +177,74 @@ void main() {
     });
   });
 
+  group('legacy absolute photo paths', () {
+    test('a pre-migration absolute path survives export and restore', () async {
+      // Rows written before the multi-photo migration recorded an absolute
+      // path baked against the sandbox container of the day, not the
+      // `images/<name>` form ImageStorage has used since. Simulate one by
+      // writing a photo straight to disk, outside of ImageStorage, and
+      // pointing the asset at its absolute path -- exactly what such a row
+      // still holds today.
+      final legacyDir = await Directory(
+        '${documents.path}/legacy_sandbox/images',
+      ).create(recursive: true);
+      final legacyFile = File('${legacyDir.path}/old-cover.jpg')
+        ..writeAsBytesSync(fakePhoto(9));
+
+      final archive = await service.export([
+        asset(id: 'legacy', photoPaths: [legacyFile.path]),
+      ]);
+
+      // The device is wiped and reinstalled: the old sandbox container, and
+      // with it the absolute path the row still remembers, is gone for good.
+      await Directory('${documents.path}/legacy_sandbox').delete(recursive: true);
+
+      final result = await restore(archive.path);
+
+      expect(result.photosRestored, 1);
+      final restoredPath = store['legacy']!.photoPaths.single;
+      final resolved = ImageStorage.resolve(restoredPath);
+      expect(
+        resolved != null && resolved.existsSync(),
+        isTrue,
+        reason: 'the photo has to actually be on disk after restore, not '
+            'just referenced by a manifest path nothing unpacked',
+      );
+      expect(resolved!.readAsBytesSync(), fakePhoto(9));
+    });
+
+    test('two legacy paths that share a basename do not overwrite each other',
+        () async {
+      final dirA = await Directory('${documents.path}/legacy_a').create(recursive: true);
+      final dirB = await Directory('${documents.path}/legacy_b').create(recursive: true);
+      final fileA = File('${dirA.path}/photo.jpg')..writeAsBytesSync(fakePhoto(11));
+      final fileB = File('${dirB.path}/photo.jpg')..writeAsBytesSync(fakePhoto(22));
+
+      final archive = await service.export([
+        asset(id: 'x', photoPaths: [fileA.path]),
+        asset(id: 'y', photoPaths: [fileB.path]),
+      ]);
+
+      await dirA.delete(recursive: true);
+      await dirB.delete(recursive: true);
+
+      final result = await restore(archive.path);
+
+      expect(result.photosRestored, 2);
+
+      final pathX = store['x']!.photoPaths.single;
+      final pathY = store['y']!.photoPaths.single;
+      expect(
+        pathX,
+        isNot(pathY),
+        reason: 'two different photos must not end up under the same '
+            'archive entry, or restoring one silently loses the other',
+      );
+      expect(ImageStorage.resolve(pathX)!.readAsBytesSync(), fakePhoto(11));
+      expect(ImageStorage.resolve(pathY)!.readAsBytesSync(), fakePhoto(22));
+    });
+  });
+
   group('restore is a merge, never a wipe', () {
     test('items not in the backup are left alone', () async {
       store['kept'] = asset(id: 'kept', name: 'Added Later');
@@ -209,6 +279,68 @@ void main() {
       expect(second.added, 0);
       expect(second.updated, 1);
       expect(store.length, 1);
+    });
+
+    test('a local edit made after the backup was taken is kept, not reverted',
+        () async {
+      store['a'] = asset(
+        id: 'a',
+        name: 'Edited After Backup',
+        lastReviewedAt: DateTime(2026, 6, 1),
+      );
+
+      final archive = await service.export([
+        asset(id: 'a', name: 'Stale From Backup', lastReviewedAt: DateTime(2026, 1, 1)),
+      ]);
+      final result = await restore(archive.path);
+
+      expect(result.keptNewer, 1);
+      expect(result.updated, 0);
+      expect(store['a']!.name, 'Edited After Backup');
+    });
+
+    test('a local row untouched since the backup is still updated', () async {
+      store['a'] = asset(id: 'a', name: 'Old Local', lastReviewedAt: DateTime(2026, 1, 1));
+
+      final archive = await service.export([
+        asset(id: 'a', name: 'Fresh From Backup', lastReviewedAt: DateTime(2026, 6, 1)),
+      ]);
+      final result = await restore(archive.path);
+
+      expect(result.keptNewer, 0);
+      expect(result.updated, 1);
+      expect(store['a']!.name, 'Fresh From Backup');
+    });
+
+    test('a backup row with no review date cannot outrank a reviewed local one',
+        () async {
+      store['a'] = asset(
+        id: 'a',
+        name: 'Reviewed Locally',
+        lastReviewedAt: DateTime(2026, 6, 1),
+      );
+
+      final archive = await service.export([
+        asset(id: 'a', name: 'From Backup, Never Reviewed'),
+      ]);
+      final result = await restore(archive.path);
+
+      expect(result.keptNewer, 1);
+      expect(store['a']!.name, 'Reviewed Locally');
+    });
+
+    test('a local row that was never reviewed is not protected from the backup',
+        () async {
+      store['a'] = asset(id: 'a', name: 'Never Reviewed Locally');
+
+      final archive = await service.export([
+        asset(id: 'a', name: 'From Backup', lastReviewedAt: DateTime(2026, 6, 1)),
+      ]);
+      final result = await restore(archive.path);
+
+      expect(result.keptNewer, 0);
+      expect(result.updated, 1);
+      expect(store['a']!.name, 'From Backup');
     });
   });
 
