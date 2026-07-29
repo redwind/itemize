@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:itemize/core/utils/maintenance_planner.dart';
 import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/data/models/maintenance_schedule.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -63,13 +64,18 @@ class Reminders {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
+  /// Remembers that the owner has been asked once, so a refusal is taken as an
+  /// answer rather than re-raised on every save.
+  static const String _askedKey = 'reminders_permission_asked';
+
   bool _ready = false;
 
-  /// True once the platform has been asked and has not said no.
+  /// True when the platform will actually deliver a notification.
   ///
-  /// Scheduling against a refused permission is not an error on either
-  /// platform, it simply does nothing, so this only exists to tell the settings
-  /// screen whether to explain itself.
+  /// Read back from the OS on every [init] rather than assumed from whatever
+  /// happened in an earlier session: permission is granted and revoked in
+  /// Settings, outside the app, and a stale copy of it here is what makes the
+  /// settings screen claim reminders are on while nothing arrives.
   bool _permitted = false;
 
   bool get isPermitted => _permitted;
@@ -103,9 +109,59 @@ class Reminders {
         },
       );
       _ready = true;
+      await _refreshPermission();
     } catch (e) {
       if (kDebugMode) print('Warranty reminders unavailable: $e');
     }
+  }
+
+  /// Reads the current permission back from the OS without prompting.
+  Future<void> _refreshPermission() async {
+    try {
+      if (Platform.isIOS) {
+        final options =
+            await _plugin
+                .resolvePlatformSpecificImplementation<
+                  IOSFlutterLocalNotificationsPlugin
+                >()
+                ?.checkPermissions();
+        _permitted = options?.isEnabled ?? false;
+      } else if (Platform.isAndroid) {
+        _permitted =
+            await _plugin
+                .resolvePlatformSpecificImplementation<
+                  AndroidFlutterLocalNotificationsPlugin
+                >()
+                ?.areNotificationsEnabled() ??
+            false;
+      }
+    } catch (e) {
+      if (kDebugMode) print('Notification permission check failed: $e');
+      _permitted = false;
+    }
+  }
+
+  /// Asks for permission the first time the app has something worth saying.
+  ///
+  /// Both reminder switches ship on, but neither platform delivers anything
+  /// until the OS itself has been asked, and the only place that asked was the
+  /// settings screen -- the fourth tab, which most people never open. The
+  /// switches therefore read "on" while iOS silently discarded every scheduled
+  /// notification. So the prompt is raised here instead, at the moment a
+  /// warranty date or a service schedule is first recorded: the one point where
+  /// "may we tell you before this runs out?" answers itself.
+  ///
+  /// Asked once. A refusal is a decision, and re-raising it on every save is
+  /// how an app teaches people to deny it permanently.
+  Future<bool> ensurePermission() async {
+    if (!_ready) return false;
+    if (_permitted) return true;
+
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_askedKey) ?? false) return false;
+    await prefs.setBool(_askedKey, true);
+
+    return requestPermission();
   }
 
   /// Asks for permission to post notifications, returning whether it was given.
@@ -134,6 +190,16 @@ class Reminders {
       if (kDebugMode) print('Notification permission request failed: $e');
       _permitted = false;
     }
+
+    // Recorded here rather than only in [ensurePermission] so that a prompt
+    // raised from the settings screen also counts as having asked.
+    try {
+      await (await SharedPreferences.getInstance()).setBool(_askedKey, true);
+    } catch (_) {
+      // Losing the flag costs one redundant prompt, which both platforms turn
+      // into a no-op once an answer exists. Not worth failing the request over.
+    }
+
     return _permitted;
   }
 

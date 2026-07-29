@@ -1585,8 +1585,14 @@ abstract class AppLocalizations {
   /// No description provided for @storeUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'The store is unavailable right now. Please try again later.'**
+  /// **'The store is unavailable right now. Check your connection and try again.'**
   String get storeUnavailable;
+
+  /// Button to reconnect to the app store after a failed init
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get retryStore;
 
   /// No description provided for @upgrade.
   ///

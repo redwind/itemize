@@ -117,6 +117,12 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
           // catalogued now rather than bought now. It is on the item's own
           // screen to correct.
           purchaseDate: now,
+          // Photographed and named a moment ago, so it has been reviewed more
+          // recently than any prompt could ask for. Left unset, a null date
+          // reads as never-reviewed, and the batch the welcome screen walks
+          // everyone through would land on the Care tab as a list of entries to
+          // go back and check.
+          lastReviewedAt: now,
         ),
       );
     }

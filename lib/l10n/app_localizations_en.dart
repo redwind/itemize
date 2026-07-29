@@ -892,7 +892,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get storeUnavailable =>
-      'The store is unavailable right now. Please try again later.';
+      'The store is unavailable right now. Check your connection and try again.';
+
+  @override
+  String get retryStore => 'Try again';
 
   @override
   String get upgrade => 'Upgrade';

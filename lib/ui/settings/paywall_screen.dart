@@ -1,13 +1,30 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:itemize/providers/pro_provider.dart';
 import 'package:itemize/l10n/app_localizations.dart';
 
-class PaywallScreen extends ConsumerWidget {
+class PaywallScreen extends ConsumerStatefulWidget {
   const PaywallScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PaywallScreen> createState() => _PaywallScreenState();
+}
+
+class _PaywallScreenState extends ConsumerState<PaywallScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // If the store failed to start earlier -- a moment without signal on first
+    // launch is enough -- try again now, quietly, before the user is shown a
+    // dead buy button. Returns immediately when the store is already up.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(proProvider.notifier).retryStoreConnection();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final proState = ref.watch(proProvider);
     final proNotifier = ref.read(proProvider.notifier);
     final l10n = AppLocalizations.of(context)!;
@@ -49,14 +66,21 @@ class PaywallScreen extends ConsumerWidget {
                 const Icon(Icons.diamond, size: 80, color: Colors.purple),
                 const SizedBox(height: 24),
                 GestureDetector(
-                  onLongPress: () {
-                    proNotifier.toggleDetailedErrors();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Toggled detailed error logs"),
-                      ),
-                    );
-                  },
+                  // Debug builds only. In release a long press on the headline
+                  // swapped every friendly purchase error for a raw exception
+                  // dump, on the one screen where a confused customer is most
+                  // likely to be pressing things.
+                  onLongPress:
+                      kDebugMode
+                          ? () {
+                            proNotifier.toggleDetailedErrors();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Toggled detailed error logs"),
+                              ),
+                            );
+                          }
+                          : null,
                   child: Text(
                     l10n.unlockFullPotential,
                     style: const TextStyle(
@@ -95,10 +119,21 @@ class PaywallScreen extends ConsumerWidget {
                 if (!proState.isStoreAvailable && !proState.isLoading)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 16),
-                    child: Text(
-                      l10n.storeUnavailable,
-                      style: const TextStyle(color: Colors.redAccent),
-                      textAlign: TextAlign.center,
+                    child: Column(
+                      children: [
+                        Text(
+                          l10n.storeUnavailable,
+                          style: const TextStyle(color: Colors.redAccent),
+                          textAlign: TextAlign.center,
+                        ),
+                        // The way back. Without it the only cure for a failed
+                        // start was force-quitting the app.
+                        TextButton.icon(
+                          onPressed: () => proNotifier.retryStoreConnection(),
+                          icon: const Icon(Icons.refresh),
+                          label: Text(l10n.retryStore),
+                        ),
+                      ],
                     ),
                   ),
 

@@ -68,23 +68,27 @@ final serviceRecordsProvider =
       return ref.read(assetRepositoryProvider).serviceRecordsFor(assetId);
     });
 
+// The three below read [allAssetsProvider], never [assetListProvider].
+//
+// They answer "what do I own, in total", and the answer must not change because
+// a query happens to be typed on another tab. Search replaces the list state
+// with a narrowed one and the tabs are kept alive by an IndexedStack, so
+// reading it here meant typing "TV" on the Assets tab silently rewrote the
+// dashboard's headline total to the value of the televisions.
+
 // For Total Value
 final totalValueProvider = Provider<double>((ref) {
-  final assetsAsync = ref.watch(assetListProvider);
-  return assetsAsync.when(
-    data:
-        (assets) => assets.fold(
-          0,
-          (sum, item) => sum + item.price,
-        ), // Simple sum, currency handling needed later
-    loading: () => 0.0,
-    error: (_, __) => 0.0,
+  final assetsAsync = ref.watch(allAssetsProvider);
+  return assetsAsync.maybeWhen(
+    // Simple sum, currency handling needed later
+    data: (assets) => assets.fold<double>(0, (sum, item) => sum + item.price),
+    orElse: () => 0.0,
   );
 });
 
 /// What everything cost against what it is estimated to be worth now.
 final depreciationProvider = Provider<DepreciationSummary>((ref) {
-  final assetsAsync = ref.watch(assetListProvider);
+  final assetsAsync = ref.watch(allAssetsProvider);
   return assetsAsync.maybeWhen(
     data: Depreciation.summarize,
     orElse: () => const DepreciationSummary(totalPaid: 0, totalCurrent: 0),
@@ -93,7 +97,7 @@ final depreciationProvider = Provider<DepreciationSummary>((ref) {
 
 // For Asset Count
 final assetCountProvider = Provider<int>((ref) {
-  final assetsAsync = ref.watch(assetListProvider);
+  final assetsAsync = ref.watch(allAssetsProvider);
   return assetsAsync.maybeWhen(
     data: (assets) => assets.length,
     orElse: () => 0,

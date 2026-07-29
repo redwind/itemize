@@ -895,7 +895,10 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get storeUnavailable =>
-      'La boutique est indisponible pour le moment. Réessayez plus tard.';
+      'La boutique est indisponible pour le moment. Vérifiez votre connexion et réessayez.';
+
+  @override
+  String get retryStore => 'Réessayer';
 
   @override
   String get upgrade => 'Passer à Pro';

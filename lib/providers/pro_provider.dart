@@ -149,15 +149,29 @@ class ProNotifier extends StateNotifier<ProState> {
 
     // Use a single try-catch block for the entire initialization
     try {
-      // FORCE DEBUG LOGS IN RELEASE MODE as per user request
-      await Purchases.setLogLevel(LogLevel.debug);
+      // Debug only. In release these logs carry the app user id and the
+      // receipt traffic into every customer's device log, which is nobody's
+      // business but theirs.
+      await Purchases.setLogLevel(
+        kDebugMode ? LogLevel.debug : LogLevel.error,
+      );
 
       PurchasesConfiguration configuration = PurchasesConfiguration(apiKey);
       await Purchases.configure(configuration);
 
+      // Entitlements can arrive long after the purchase call returned: a
+      // deferred purchase ("Ask to Buy") is approved by a parent hours later,
+      // and a purchase made on another device syncs whenever it syncs. Without
+      // this listener the money is taken and the app stays locked until the
+      // user thinks to restart it or find Restore Purchases.
+      if (!_listenerAttached) {
+        Purchases.addCustomerInfoUpdateListener(_onCustomerInfo);
+        _listenerAttached = true;
+      }
+
       // Verify connection by getting customer info immediately after configure
       CustomerInfo customerInfo = await Purchases.getCustomerInfo();
-      state = state.copyWith(isStoreAvailable: true);
+      state = state.copyWith(isStoreAvailable: true, clearErrorMessage: true);
       _updateProStatus(customerInfo);
       await _loadOffering();
     } catch (e) {
@@ -170,6 +184,29 @@ class ProNotifier extends StateNotifier<ProState> {
     }
   }
 
+  /// Called by RevenueCat whenever entitlements change, from any source.
+  void _onCustomerInfo(CustomerInfo info) {
+    if (!mounted) return;
+    final wasPro = state.isPro;
+    _updateProStatus(info);
+    if (!wasPro && state.isPro && state.successMessage == null) {
+      state = state.copyWith(successMessage: "Success! You are now Pro.");
+    }
+  }
+
+  /// Tries the store again after a failed start.
+  ///
+  /// Without this a single flaky moment during the very first launch left
+  /// `isStoreAvailable` false for the rest of the session, with a dead buy
+  /// button and no way back short of force-quitting the app. Someone who
+  /// arrived at the paywall willing to pay was simply turned away.
+  Future<void> retryStoreConnection() async {
+    if (state.isStoreAvailable || state.isLoading) return;
+    state = state.copyWith(isLoading: true, clearErrorMessage: true);
+    await _initRevenueCat();
+    state = state.copyWith(isLoading: false);
+  }
+
   /// Fetches the package on offer so the paywall can price itself.
   ///
   /// A failure here is not surfaced as an error: the paywall degrades to
@@ -178,14 +215,37 @@ class ProNotifier extends StateNotifier<ProState> {
   Future<void> _loadOffering() async {
     try {
       final Offerings offerings = await Purchases.getOfferings();
-      final packages = offerings.current?.availablePackages ?? const [];
-      if (packages.isNotEmpty) {
-        state = state.copyWith(proPackage: packages.first);
+      final current = offerings.current;
+      if (current == null) return;
+
+      // The lifetime package by name, not whatever happens to sit at position
+      // zero. Picking by position means that the day a second package is added
+      // -- for a price test, or a subscription experiment -- the dashboard's
+      // ordering silently decides what every customer is charged for.
+      final package =
+          current.lifetime ??
+          (current.availablePackages.isNotEmpty
+              ? current.availablePackages.first
+              : null);
+      if (package == null) return;
+
+      if (current.lifetime == null) {
+        if (kDebugMode) {
+          print(
+            'No lifetime package in offering "${current.identifier}"; '
+            'falling back to "${package.identifier}".',
+          );
+        }
       }
+      state = state.copyWith(proPackage: package);
     } catch (e) {
       if (kDebugMode) print("Loading offerings failed: $e");
     }
   }
+
+  /// [retryStoreConnection] runs the whole init again, and the listener would
+  /// otherwise be added once per attempt.
+  bool _listenerAttached = false;
 
   // Debug flag for release mode
   bool _showDetailedErrors = false;
@@ -276,10 +336,34 @@ class ProNotifier extends StateNotifier<ProState> {
       String errorMsg = "Purchase failed";
       var errorCode = PurchasesErrorHelper.getErrorCode(e);
       if (errorCode == PurchasesErrorCode.productAlreadyPurchasedError) {
-        errorMsg = "You already own this item.";
-        // Automatically give them Pro if they already own it
-        state = state.copyWith(isPro: true, successMessage: errorMsg);
+        // Owned according to the store, which is not the same as entitled
+        // according to RevenueCat -- the two disagree whenever the purchase is
+        // attached to a different app user id, which is what a reinstall or a
+        // device transfer produces. Granting Pro locally here made the app
+        // unlock for one session and lock itself again on the next launch,
+        // after the report had been exported and the lock switched on. So ask
+        // the server to reconcile it instead of taking the error code's word.
+        await restorePurchases();
+        if (!state.isPro) {
+          state = state.copyWith(
+            clearSuccessMessage: true,
+            errorMessage:
+                "The store says this is already purchased, but it is not "
+                "linked to this account yet. Try Restore Purchases again, or "
+                "check you are signed in with the account that bought it.",
+          );
+        }
         return; // Skip setting errorMessage
+      } else if (errorCode == PurchasesErrorCode.paymentPendingError) {
+        // Ask to Buy, or a bank that wants a second factor. The charge may yet
+        // go through, so this is not a failure and must not be reported as one.
+        // _onCustomerInfo unlocks the app if and when approval arrives.
+        state = state.copyWith(
+          successMessage:
+              "Waiting for approval. Pro unlocks as soon as the purchase is "
+              "approved.",
+        );
+        return;
       } else if (errorCode == PurchasesErrorCode.purchaseCancelledError) {
         errorMsg = "Purchase cancelled.";
       } else {
@@ -305,11 +389,6 @@ class ProNotifier extends StateNotifier<ProState> {
     final isPro =
         customerInfo.entitlements.all[kProEntitlementId]?.isActive ?? false;
     state = state.copyWith(isPro: isPro);
-  }
-
-  // Debug method
-  void toggleProStatus() {
-    state = state.copyWith(isPro: !state.isPro);
   }
 
   // Debug method

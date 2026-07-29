@@ -15,7 +15,9 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final totalValue = ref.watch(totalValueProvider);
-    final assetsAsync = ref.watch(assetListProvider);
+    // Every item, not the Assets tab's current filter -- the pie is a picture of
+    // the whole inventory and must not redraw itself around someone's search.
+    final assetsAsync = ref.watch(allAssetsProvider);
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(

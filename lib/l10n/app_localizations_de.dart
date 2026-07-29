@@ -897,7 +897,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get storeUnavailable =>
-      'Der Store ist derzeit nicht erreichbar. Bitte später erneut versuchen.';
+      'Der Store ist derzeit nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.';
+
+  @override
+  String get retryStore => 'Erneut versuchen';
 
   @override
   String get upgrade => 'Auf Pro wechseln';

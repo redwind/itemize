@@ -7,6 +7,7 @@ import 'package:itemize/core/catalog/asset_catalog.dart';
 import 'package:itemize/core/utils/catalog_image.dart';
 import 'package:itemize/core/utils/image_storage.dart';
 import 'package:itemize/core/utils/ocr_service.dart';
+import 'package:itemize/core/utils/reminders.dart';
 import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/l10n/app_localizations.dart';
 import 'package:itemize/l10n/domain_labels.dart';
@@ -387,6 +388,14 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
     } else {
       await notifier.addAsset(asset);
     }
+
+    // The first warranty date recorded is the first thing the app has to say
+    // later, and the moment the request for permission to say it makes sense.
+    // Asked after the save so a refusal never costs the owner their typing.
+    if (_warrantyExpiry != null) {
+      await Reminders.instance.ensurePermission();
+    }
+
     await HapticFeedback.mediumImpact();
 
     if (mounted) Navigator.pop(context, asset);

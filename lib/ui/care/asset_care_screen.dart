@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:itemize/core/theme/app_theme.dart';
 import 'package:itemize/core/utils/maintenance_planner.dart';
 import 'package:itemize/core/utils/ownership_cost.dart';
+import 'package:itemize/core/utils/reminders.dart';
 import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/data/models/maintenance_schedule.dart';
 import 'package:itemize/data/models/service_record.dart';
@@ -144,6 +145,9 @@ class AssetCareScreen extends ConsumerWidget {
     if (result == null) return;
 
     await ref.read(assetRepositoryProvider).saveSchedule(result);
+    // A schedule exists to be reminded of, so this is the other moment worth
+    // asking. See [Reminders.ensurePermission] -- only the first one prompts.
+    await Reminders.instance.ensurePermission();
     await _refresh(ref);
   }
 
