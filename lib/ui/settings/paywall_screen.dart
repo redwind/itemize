@@ -1,8 +1,37 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:itemize/core/utils/free_tier.dart';
 import 'package:itemize/providers/pro_provider.dart';
 import 'package:itemize/l10n/app_localizations.dart';
+
+/// Where a [ProOutcome] becomes user-facing text. Kept beside the one screen
+/// that shows purchase outcomes today, not on [ProState] itself, so the
+/// notifier never goes stale when the language changes underneath it.
+extension ProOutcomeText on ProOutcome {
+  String localize(AppLocalizations l10n) {
+    switch (this) {
+      case ProOutcome.storeUnavailable:
+        return l10n.storeUnavailable;
+      case ProOutcome.purchasePending:
+        return l10n.purchasePending;
+      case ProOutcome.purchaseCancelled:
+        return l10n.purchaseCancelled;
+      case ProOutcome.purchaseFailed:
+        return l10n.purchaseFailed;
+      case ProOutcome.purchaseAlreadyOwnedUnlinked:
+        return l10n.purchaseAlreadyOwnedUnlinked;
+      case ProOutcome.purchaseSucceeded:
+        return l10n.welcomeToPro;
+      case ProOutcome.restoredToPro:
+        return l10n.restoredToPro;
+      case ProOutcome.restoredNothingFound:
+        return l10n.restoredNothingFound;
+      case ProOutcome.restoreFailed:
+        return l10n.restorePurchasesFailed;
+    }
+  }
+}
 
 class PaywallScreen extends ConsumerStatefulWidget {
   const PaywallScreen({super.key});
@@ -31,21 +60,28 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
 
     // Listen for state changes
     ref.listen(proProvider, (previous, next) {
-      if (next.errorMessage != null &&
-          next.errorMessage != previous?.errorMessage) {
+      if (next.errorOutcome != null &&
+          (next.errorOutcome != previous?.errorOutcome ||
+              next.errorDetail != previous?.errorDetail)) {
+        // The raw exception only ever rides alongside the outcome when
+        // toggleDetailedErrors is on, so it is safe to always append here.
+        final message =
+            next.errorDetail == null
+                ? next.errorOutcome!.localize(l10n)
+                : '${next.errorOutcome!.localize(l10n)}: ${next.errorDetail}';
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(next.errorMessage!)));
+        ).showSnackBar(SnackBar(content: Text(message)));
       }
-      if (next.successMessage != null &&
-          next.successMessage != previous?.successMessage) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(next.successMessage!)));
+      if (next.successOutcome != null &&
+          next.successOutcome != previous?.successOutcome) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.successOutcome!.localize(l10n))),
+        );
       }
 
       if (next.isPro && !(previous?.isPro ?? false)) {
-        if (next.successMessage == null) {
+        if (next.successOutcome == null) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text(l10n.welcomeToPro)));
@@ -98,6 +134,11 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                 ),
                 const SizedBox(height: 32),
 
+                _buildBenefitItem(
+                  Icons.all_inclusive,
+                  l10n.paywallUnlimited,
+                  l10n.paywallUnlimitedBody(kFreeItemLimit),
+                ),
                 _buildBenefitItem(
                   Icons.description,
                   l10n.paywallReport,

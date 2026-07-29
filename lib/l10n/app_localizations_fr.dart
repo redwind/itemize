@@ -863,7 +863,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get upgradeToProSubtitle =>
-      'Rapports d\'assurance et sauvegardes. Tout le reste est gratuit.';
+      'Objets illimités, rapports d\'assurance et sauvegardes.';
 
   @override
   String get proBadge => 'PRO';
@@ -873,7 +873,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get paywallLead =>
-      'Enregistrer et entretenir vos biens est gratuit, sans limite, et le restera. Pro sert à en ressortir quelque chose.';
+      'Prendre soin de ce que vous possédez reste gratuit. Pro sert à dépasser le plafond gratuit — et à tout ressortir.';
 
   @override
   String get paywallReport => 'Rapport d\'assurance';
@@ -1250,4 +1250,220 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get batchSaveFailed =>
       'Enregistrement impossible. Rien n\'a été stocké — vos photos sont toujours là, réessayez.';
+
+  @override
+  String freeLimitTitle(int limit) {
+    return 'La version gratuite contient $limit objets';
+  }
+
+  @override
+  String get freeLimitBody =>
+      'Tout ce que vous avez enregistré reste tel quel. Débloquez une seule fois pour continuer — sans abonnement, sans compte.';
+
+  @override
+  String freeSlotsLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count emplacements gratuits restants',
+      one: '1 emplacement gratuit restant',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String freeLimitBatchCapped(int saved, int limit, int dropped) {
+    return '$saved enregistré(s). La version gratuite contient $limit objets, donc $dropped sont encore en attente.';
+  }
+
+  @override
+  String get paywallUnlimited => 'Objets illimités';
+
+  @override
+  String paywallUnlimitedBody(int limit) {
+    return 'Enregistrez tout ce que vous possédez. La version gratuite s\'arrête à $limit ; Pro ne s\'arrête pas.';
+  }
+
+  @override
+  String get warrantyPromptTitle => 'Encore sous garantie ?';
+
+  @override
+  String get warrantyPromptBody =>
+      'Une minute ici, et les rappels fonctionneront plus tard. Laissez de côté ce dont vous n\'êtes pas sûr.';
+
+  @override
+  String get warrantyPromptSkip => 'Pas maintenant';
+
+  @override
+  String warrantyYears(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ans',
+      one: '1 an',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get warrantyNoneOption => 'Aucune';
+
+  @override
+  String get warrantyOtherDate => 'Autre date';
+
+  @override
+  String warrantyPromptSaved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Garanties enregistrées pour $count objets',
+      one: 'Garantie enregistrée pour 1 objet',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get batchDefaults => 'Valeurs par défaut des nouvelles photos';
+
+  @override
+  String get applyToAll => 'Appliquer à tout';
+
+  @override
+  String notifWarrantyEndsTomorrow(String name) {
+    return '$name — la garantie se termine demain';
+  }
+
+  @override
+  String notifWarrantyEndsInAWeek(String name) {
+    return '$name — la garantie se termine dans une semaine';
+  }
+
+  @override
+  String notifWarrantyEndsInDays(String name, int days) {
+    return '$name — la garantie se termine dans $days jours';
+  }
+
+  @override
+  String notifWarrantyBody(String expiry, String purchased) {
+    return 'Garantie jusqu\'au $expiry. Acheté le $purchased.';
+  }
+
+  @override
+  String notifJobDueToday(String name, String job) {
+    return '$name — $job à faire aujourd\'hui';
+  }
+
+  @override
+  String notifJobDueInDays(String name, String job, int days) {
+    return '$name — $job à faire dans $days jours';
+  }
+
+  @override
+  String get notifNeverDone => 'Jamais enregistré comme fait.';
+
+  @override
+  String notifLastDone(String date) {
+    return 'Dernière fois le $date.';
+  }
+
+  @override
+  String get notifRequiredForWarranty =>
+      'Obligatoire pour conserver la garantie.';
+
+  @override
+  String get notifChannelName => 'Rappels d\'objets';
+
+  @override
+  String get notifChannelDescription =>
+      'Vous prévient avant l\'expiration d\'une garantie ou l\'échéance d\'un entretien.';
+
+  @override
+  String get purchasePending =>
+      'En attente d\'approbation. Pro se débloquera dès que l\'achat sera approuvé.';
+
+  @override
+  String get purchaseCancelled => 'Achat annulé.';
+
+  @override
+  String get purchaseFailed => 'Échec de l\'achat.';
+
+  @override
+  String get purchaseAlreadyOwnedUnlinked =>
+      'La boutique indique que c\'est déjà acheté, mais ce n\'est pas encore lié à ce compte. Essayez « Restaurer les achats », ou vérifiez que vous êtes connecté avec le compte ayant effectué l\'achat.';
+
+  @override
+  String get restoredToPro => 'Restauré. Vous êtes Pro.';
+
+  @override
+  String get restoredNothingFound =>
+      'Restauration effectuée, mais aucun achat trouvé sur ce compte.';
+
+  @override
+  String get restorePurchasesFailed => 'Impossible de restaurer les achats.';
+
+  @override
+  String get dashboardAttention => 'À traiter';
+
+  @override
+  String get dashboardAllClear => 'Rien à traiter pour le moment.';
+
+  @override
+  String attentionWarrantiesEnding(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count garanties bientôt expirées',
+      one: '1 garantie bientôt expirée',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String attentionJobsOverdue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count entretiens en retard',
+      one: '1 entretien en retard',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String attentionWarrantyAtRisk(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count garanties menacées',
+      one: '1 garantie menacée',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String attentionToReview(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fiches à vérifier',
+      one: '1 fiche à vérifier',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String itemsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count objets',
+      one: '1 objet',
+      zero: 'Vide',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dashboardNothingYet =>
+      'Rien d\'enregistré pour l\'instant. Photographiez une pièce et tout se remplira.';
 }

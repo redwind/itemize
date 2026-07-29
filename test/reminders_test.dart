@@ -1,7 +1,11 @@
+import 'dart:ui' show Locale;
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:itemize/core/utils/reminders.dart';
 import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/data/models/maintenance_schedule.dart';
+import 'package:itemize/l10n/app_localizations.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -21,11 +25,15 @@ Asset asset({
 );
 
 void main() {
-  setUpAll(() {
+  setUpAll(() async {
     tzdata.initializeTimeZones();
     // Fixed so the expected fire times below do not move with the machine
     // running the tests.
     tz.setLocalLocation(tz.getLocation('UTC'));
+    // DateFormat falls back to raw ICU patterns for a locale it has no symbol
+    // data for, which silently produces the English month names the German
+    // and French tests below are checking are absent.
+    await initializeDateFormatting();
   });
 
   // UTC throughout, matching the local zone pinned above, so "now" and the
@@ -312,6 +320,86 @@ void main() {
       final times = reminders.map((r) => r.fireAt).toList();
       expect(times, orderedEquals([...times]..sort()));
       expect(reminders.length, greaterThan(kReminderLeadDays.length));
+    });
+  });
+
+  group('localization', () {
+    final l10nDe = lookupAppLocalizations(const Locale('de'));
+    final l10nFr = lookupAppLocalizations(const Locale('fr'));
+
+    test('a German reminder has a German title and a German date in the body', () {
+      final reminders = Reminders.upcomingReminders(
+        [
+          asset(
+            id: 'a',
+            name: 'Kühlschrank',
+            warrantyExpiry: DateTime(2026, 12, 25),
+          ),
+        ],
+        now: now,
+        l10n: l10nDe,
+      );
+
+      // The 1-day lead is the last to fire, chronologically last in the sort.
+      final tomorrow = reminders.last;
+      expect(tomorrow.title, 'Kühlschrank — Garantie endet morgen');
+      expect(
+        tomorrow.body,
+        'Garantie endet am 25. Dez. 2026. Gekauft am 1. Jan. 2024.',
+      );
+    });
+
+    test(
+      'a French reminder has a French title and a day-first date in the body',
+      () {
+        final reminders = Reminders.upcomingReminders(
+          [
+            asset(
+              id: 'a',
+              name: 'Réfrigérateur',
+              warrantyExpiry: DateTime(2026, 12, 25),
+            ),
+          ],
+          now: now,
+          l10n: l10nFr,
+        );
+
+        final tomorrow = reminders.last;
+        expect(tomorrow.title, 'Réfrigérateur — la garantie se termine demain');
+        // Day before month, unlike the English "Dec 25, 2026" -- the bug an
+        // American-formatted date inside a French notification would be.
+        expect(
+          tomorrow.body,
+          "Garantie jusqu'au 25 déc. 2026. Acheté le 1 janv. 2024.",
+        );
+      },
+    );
+
+    test('a German maintenance reminder is fully translated, not mixed', () {
+      final reminders = Reminders.upcomingReminders(
+        [asset(id: 'a', warrantyExpiry: DateTime(2028, 1, 1))],
+        schedules: [
+          MaintenanceSchedule(
+            id: 's',
+            assetId: 'a',
+            title: 'Filter wechseln',
+            intervalMonths: 18,
+            lastDoneAt: DateTime(2026, 1, 1),
+            requiredForWarranty: true,
+          ),
+        ],
+        warrantyEnabled: false,
+        maintenanceEnabled: true,
+        now: now,
+        l10n: l10nDe,
+      );
+
+      expect(reminders, isNotEmpty);
+      for (final reminder in reminders) {
+        expect(reminder.title, contains('Filter wechseln'));
+        expect(reminder.body, contains('1. Jan. 2026'));
+        expect(reminder.body, contains('Erforderlich, damit die Garantie'));
+      }
     });
   });
 }

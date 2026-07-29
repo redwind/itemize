@@ -1531,7 +1531,7 @@ abstract class AppLocalizations {
   /// No description provided for @upgradeToProSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Insurance reports and backups. Everything else is free.'**
+  /// **'Unlimited items, insurance reports and backups.'**
   String get upgradeToProSubtitle;
 
   /// No description provided for @proBadge.
@@ -1549,7 +1549,7 @@ abstract class AppLocalizations {
   /// No description provided for @paywallLead.
   ///
   /// In en, this message translates to:
-  /// **'Recording and looking after your things is free, unlimited, and stays that way. Pro is for getting it back out.'**
+  /// **'Looking after what you own is the part that stays free. Pro is for going past the free ceiling — and for getting it all back out again.'**
   String get paywallLead;
 
   /// No description provided for @paywallReport.
@@ -2241,6 +2241,252 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not save. Nothing was stored — your photos are still here, try again.'**
   String get batchSaveFailed;
+
+  /// No description provided for @freeLimitTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The free version holds {limit} items'**
+  String freeLimitTitle(int limit);
+
+  /// No description provided for @freeLimitBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything you have recorded stays exactly as it is. Unlock once to keep adding — no subscription, no account.'**
+  String get freeLimitBody;
+
+  /// No description provided for @freeSlotsLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 free slot left} other{{count} free slots left}}'**
+  String freeSlotsLeft(int count);
+
+  /// No description provided for @freeLimitBatchCapped.
+  ///
+  /// In en, this message translates to:
+  /// **'{saved} saved. The free version holds {limit} items, so {dropped} are still waiting.'**
+  String freeLimitBatchCapped(int saved, int limit, int dropped);
+
+  /// No description provided for @paywallUnlimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlimited Items'**
+  String get paywallUnlimited;
+
+  /// No description provided for @paywallUnlimitedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Record everything you own. The free version stops at {limit}; Pro does not stop.'**
+  String paywallUnlimitedBody(int limit);
+
+  /// No description provided for @warrantyPromptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Still under warranty?'**
+  String get warrantyPromptTitle;
+
+  /// No description provided for @warrantyPromptBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A minute here is what makes the reminders work later. Leave anything you are not sure about.'**
+  String get warrantyPromptBody;
+
+  /// No description provided for @warrantyPromptSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get warrantyPromptSkip;
+
+  /// No description provided for @warrantyYears.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 year} other{{count} years}}'**
+  String warrantyYears(int count);
+
+  /// No description provided for @warrantyNoneOption.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get warrantyNoneOption;
+
+  /// No description provided for @warrantyOtherDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Other date'**
+  String get warrantyOtherDate;
+
+  /// No description provided for @warrantyPromptSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Warranty saved for 1 item} other{Warranties saved for {count} items}}'**
+  String warrantyPromptSaved(int count);
+
+  /// No description provided for @batchDefaults.
+  ///
+  /// In en, this message translates to:
+  /// **'Defaults for new photos'**
+  String get batchDefaults;
+
+  /// No description provided for @applyToAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply to all'**
+  String get applyToAll;
+
+  /// No description provided for @notifWarrantyEndsTomorrow.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} — warranty ends tomorrow'**
+  String notifWarrantyEndsTomorrow(String name);
+
+  /// No description provided for @notifWarrantyEndsInAWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} — warranty ends in a week'**
+  String notifWarrantyEndsInAWeek(String name);
+
+  /// No description provided for @notifWarrantyEndsInDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} — warranty ends in {days} days'**
+  String notifWarrantyEndsInDays(String name, int days);
+
+  /// No description provided for @notifWarrantyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Warranty ends {expiry}. Bought {purchased}.'**
+  String notifWarrantyBody(String expiry, String purchased);
+
+  /// No description provided for @notifJobDueToday.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} — {job} due today'**
+  String notifJobDueToday(String name, String job);
+
+  /// No description provided for @notifJobDueInDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} — {job} due in {days} days'**
+  String notifJobDueInDays(String name, String job, int days);
+
+  /// No description provided for @notifNeverDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Never logged as done.'**
+  String get notifNeverDone;
+
+  /// No description provided for @notifLastDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Last done {date}.'**
+  String notifLastDone(String date);
+
+  /// No description provided for @notifRequiredForWarranty.
+  ///
+  /// In en, this message translates to:
+  /// **'Required to keep the warranty valid.'**
+  String get notifRequiredForWarranty;
+
+  /// No description provided for @notifChannelName.
+  ///
+  /// In en, this message translates to:
+  /// **'Item reminders'**
+  String get notifChannelName;
+
+  /// No description provided for @notifChannelDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Tells you before a warranty runs out or a job falls due.'**
+  String get notifChannelDescription;
+
+  /// No description provided for @purchasePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for approval. Pro unlocks as soon as the purchase is approved.'**
+  String get purchasePending;
+
+  /// No description provided for @purchaseCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase cancelled.'**
+  String get purchaseCancelled;
+
+  /// No description provided for @purchaseFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase failed.'**
+  String get purchaseFailed;
+
+  /// No description provided for @purchaseAlreadyOwnedUnlinked.
+  ///
+  /// In en, this message translates to:
+  /// **'The store says this is already purchased, but it is not linked to this account yet. Try Restore Purchases, or check you are signed in with the account that bought it.'**
+  String get purchaseAlreadyOwnedUnlinked;
+
+  /// No description provided for @restoredToPro.
+  ///
+  /// In en, this message translates to:
+  /// **'Restored. You are Pro.'**
+  String get restoredToPro;
+
+  /// No description provided for @restoredNothingFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Restored, but no purchase was found on this account.'**
+  String get restoredNothingFound;
+
+  /// No description provided for @restorePurchasesFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not restore purchases.'**
+  String get restorePurchasesFailed;
+
+  /// No description provided for @dashboardAttention.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs attention'**
+  String get dashboardAttention;
+
+  /// No description provided for @dashboardAllClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing needs attention right now.'**
+  String get dashboardAllClear;
+
+  /// No description provided for @attentionWarrantiesEnding.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 warranty ending soon} other{{count} warranties ending soon}}'**
+  String attentionWarrantiesEnding(int count);
+
+  /// No description provided for @attentionJobsOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 job overdue} other{{count} jobs overdue}}'**
+  String attentionJobsOverdue(int count);
+
+  /// No description provided for @attentionWarrantyAtRisk.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 warranty at risk} other{{count} warranties at risk}}'**
+  String attentionWarrantyAtRisk(int count);
+
+  /// No description provided for @attentionToReview.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 entry to check} other{{count} entries to check}}'**
+  String attentionToReview(int count);
+
+  /// No description provided for @itemsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Empty} =1{1 item} other{{count} items}}'**
+  String itemsCount(int count);
+
+  /// No description provided for @dashboardNothingYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing recorded yet. Photograph a room and it will fill in.'**
+  String get dashboardNothingYet;
 }
 
 class _AppLocalizationsDelegate

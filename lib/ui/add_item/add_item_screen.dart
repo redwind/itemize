@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:itemize/core/catalog/asset_catalog.dart';
 import 'package:itemize/core/utils/amount.dart';
+import 'package:itemize/core/utils/free_tier.dart';
 import 'package:itemize/core/utils/catalog_image.dart';
 import 'package:itemize/core/utils/image_storage.dart';
 import 'package:itemize/core/utils/ocr_service.dart';
@@ -13,8 +14,10 @@ import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/l10n/app_localizations.dart';
 import 'package:itemize/l10n/domain_labels.dart';
 import 'package:itemize/providers/asset_provider.dart';
+import 'package:itemize/providers/pro_provider.dart';
 import 'package:itemize/providers/settings_provider.dart';
 import 'package:itemize/ui/add_item/asset_library_screen.dart';
+import 'package:itemize/ui/settings/paywall_screen.dart';
 import 'package:itemize/ui/widgets/asset_thumbnail.dart';
 import 'package:uuid/uuid.dart';
 
@@ -38,7 +41,14 @@ class AddItemScreen extends ConsumerStatefulWidget {
 
 class _AddItemScreenState extends ConsumerState<AddItemScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _ocrService = OCRService(); // In a real app, use a provider
+  /// Built on first use, not on first build.
+  ///
+  /// Constructing it spins up ML Kit's text recogniser and barcode scanner,
+  /// which most visits to this screen never ask for -- and which nothing but a
+  /// real device can provide, so eager construction also made the screen
+  /// impossible to put in a widget test.
+  OCRService? _ocr;
+  OCRService get _ocrService => _ocr ??= OCRService();
   final _imagePicker = ImagePicker();
 
   // Controllers
@@ -99,7 +109,9 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
     _brandController.dispose();
     _modelController.dispose();
     _notesController.dispose();
-    _ocrService.close();
+    // Only if it was ever built; asking for it here would construct one purely
+    // in order to close it.
+    _ocr?.close();
     super.dispose();
   }
 
@@ -355,13 +367,13 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
       return;
     }
 
-    // No ceiling on how much can be recorded, deliberately.
+    // The free ceiling applies to new items only.
     //
-    // Capping stored items charged for the work the owner does rather than for
-    // anything the app provides, and it bit hardest at the moment the app was
-    // finally being used properly. Pro is charged for what comes back out --
-    // the insurance report, the backup, unlimited lookups -- which is reached
-    // once the inventory is worth having, not while it is being built.
+    // Editing is never blocked: someone who is over the limit -- which a
+    // restored backup alone can do -- must still be able to correct what they
+    // already own. Turning them away from their own data would be the app
+    // holding it hostage, and it is not what is being sold.
+    if (!_isEditing && !await _mayAddOneMore()) return;
 
     final settings = ref.read(settingsProvider);
     final asset = Asset(
@@ -406,6 +418,59 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
     await HapticFeedback.mediumImpact();
 
     if (mounted) Navigator.pop(context, asset);
+  }
+
+  /// Whether there is room for one more, offering the way past when there is
+  /// not.
+  ///
+  /// The wall is shown with what has already been recorded intact and named as
+  /// such: the fear at this moment is that paying is the price of keeping what
+  /// you typed, and it is not.
+  Future<bool> _mayAddOneMore() async {
+    // Counted from storage, not from assetCountProvider. That provider is
+    // derived from a FutureProvider, so the first read of it on a cold start
+    // answers zero while the load is still in flight -- and a gate that
+    // answers zero is a gate that is open. This is the number the decision has
+    // to be made on, so it is asked for directly.
+    final count = await ref.read(assetRepositoryProvider).countAssets();
+    if (!mounted) return false;
+
+    final remaining = remainingFreeSlots(
+      currentCount: count,
+      isPro: ref.read(proProvider).isPro,
+    );
+    if (remaining == null || remaining > 0) return true;
+
+    final l10n = AppLocalizations.of(context)!;
+    final upgrade = await showDialog<bool>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: Text(l10n.freeLimitTitle(kFreeItemLimit)),
+            content: Text(l10n.freeLimitBody),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(l10n.cancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(l10n.upgradeToPro),
+              ),
+            ],
+          ),
+    );
+
+    if (upgrade == true && mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const PaywallScreen()),
+      );
+      // Straight back to saving if they bought it, rather than making them
+      // find the button again on a screen they have already filled in.
+      if (mounted && ref.read(proProvider).isPro) return true;
+    }
+    return false;
   }
 
   String? _trimmedOrNull(TextEditingController controller) {

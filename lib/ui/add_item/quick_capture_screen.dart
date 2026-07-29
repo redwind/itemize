@@ -3,10 +3,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:itemize/core/utils/amount.dart';
+import 'package:itemize/core/utils/free_tier.dart';
 import 'package:itemize/core/utils/image_storage.dart';
+import 'package:itemize/core/utils/reminders.dart';
 import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/providers/asset_provider.dart';
+import 'package:itemize/providers/pro_provider.dart';
 import 'package:itemize/providers/settings_provider.dart';
+import 'package:itemize/ui/add_item/warranty_prompt_screen.dart';
+import 'package:itemize/ui/settings/paywall_screen.dart';
 import 'package:itemize/ui/widgets/asset_thumbnail.dart';
 import 'package:uuid/uuid.dart';
 import 'package:itemize/l10n/app_localizations.dart';
@@ -18,7 +23,16 @@ class _Draft {
   final TextEditingController name = TextEditingController();
   final TextEditingController price = TextEditingController();
 
-  _Draft(this.photoPath);
+  /// Its own, seeded from the batch's default and changeable per row.
+  ///
+  /// Category is not decoration: it keys the depreciation table, so a sofa
+  /// filed as Electronics is written off over five years instead of fifteen
+  /// and the "estimated value today" on the paid report drifts wrong month by
+  /// month. One category for a whole living room guaranteed that for
+  /// everything in it but the television.
+  String category;
+
+  _Draft(this.photoPath, this.category);
 
   bool get isNamed => name.text.trim().isNotEmpty;
 
@@ -75,7 +89,7 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
 
       final stored = await ImageStorage.saveFile(shot.path);
       if (!mounted) return;
-      setState(() => _drafts.add(_Draft(stored)));
+      setState(() => _drafts.add(_Draft(stored, _category)));
       await HapticFeedback.selectionClick();
     }
   }
@@ -92,12 +106,34 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
       stored.add(await ImageStorage.saveFile(shot.path));
     }
     if (!mounted) return;
-    setState(() => _drafts.addAll(stored.map(_Draft.new)));
+    setState(() => _drafts.addAll(stored.map((p) => _Draft(p, _category))));
   }
 
   Future<void> _saveNamed() async {
-    final ready = _drafts.where((d) => d.isNamed).toList();
-    if (ready.isEmpty) return;
+    final named = _drafts.where((d) => d.isNamed).toList();
+    if (named.isEmpty) return;
+
+    // How much of the room fits before the free ceiling. Worked out up front,
+    // for the whole batch, rather than discovered on the thirteenth item after
+    // the owner has walked round photographing thirty.
+    //
+    // Counted from storage rather than from assetCountProvider, which answers
+    // zero while its underlying future is still in flight -- and a gate that
+    // answers zero is a gate that is open.
+    final count = await ref.read(assetRepositoryProvider).countAssets();
+    if (!mounted) return;
+
+    final fits = fitBatch(
+      batchSize: named.length,
+      currentCount: count,
+      isPro: ref.read(proProvider).isPro,
+    );
+    if (fits == 0) {
+      await _showLimitReached();
+      return;
+    }
+    final ready = named.take(fits).toList();
+    final capped = named.length - ready.length;
 
     setState(() => _isSaving = true);
 
@@ -111,7 +147,7 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
     // forty-item room item by item meant forty reloads and some two thousand
     // platform calls -- and left the room half-stored if anything failed
     // part-way.
-    final saved = await notifier.addAssets([
+    final stored = [
       for (final draft in ready)
         Asset(
           id: const Uuid().v4(),
@@ -121,7 +157,7 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
               parseAmount(draft.price.text, locale: settings.languageCode) ?? 0,
           currency: currency,
           room: _room,
-          category: _category,
+          category: draft.category,
           photoPaths: [draft.photoPath],
           // Today, because that is the honest answer for something being
           // catalogued now rather than bought now. It is on the item's own
@@ -134,7 +170,8 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
           // go back and check.
           lastReviewedAt: now,
         ),
-    ]);
+    ];
+    final saved = await notifier.addAssets(stored);
 
     if (!mounted) return;
 
@@ -163,18 +200,98 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
     await HapticFeedback.mediumImpact();
     if (!mounted) return;
 
+    await _askAboutWarranties(stored);
+    if (!mounted) return;
+
+    final l10n = AppLocalizations.of(context)!;
+
+    if (capped > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            l10n.freeLimitBatchCapped(ready.length, kFreeItemLimit, capped),
+          ),
+        ),
+      );
+      return;
+    }
+
     if (leftover == 0) {
       Navigator.pop(context);
       return;
     }
-
-    final l10n = AppLocalizations.of(context)!;
 
     // The unnamed ones stay put rather than being thrown away with the
     // photographs the user just walked around taking.
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(l10n.savedNeedNames(ready.length, leftover))),
     );
+  }
+
+  /// Asks how long the batch is covered for, and records the answers.
+  ///
+  /// This is where the app stops being a list and starts being worth opening
+  /// again. Quick Capture saves items with no warranty date and no schedules,
+  /// so the funnel that onboards nearly everyone was producing a Care tab that
+  /// would say nothing for as long as they owned the phone -- the one feature
+  /// the app is actually sold on, never seen. Asked here, once, right after
+  /// the photographs, where the answer is still in the owner's head.
+  Future<void> _askAboutWarranties(List<Asset> stored) async {
+    if (stored.isEmpty) return;
+
+    final dated = await showWarrantyPrompt(context, assets: stored);
+    if (dated.isEmpty || !mounted) return;
+
+    final notifier = ref.read(assetListProvider.notifier);
+    for (final asset in dated) {
+      await notifier.updateAsset(asset);
+    }
+
+    // The first warranty date recorded is the first thing the app will have to
+    // say later, and asking to be allowed to say it only makes sense once one
+    // exists. Only the first of these prompts.
+    await Reminders.instance.ensurePermission();
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          AppLocalizations.of(context)!.warrantyPromptSaved(dated.length),
+        ),
+      ),
+    );
+  }
+
+  /// The wall, with the way past it.
+  Future<void> _showLimitReached() async {
+    final l10n = AppLocalizations.of(context)!;
+    final upgrade = await showDialog<bool>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: Text(l10n.freeLimitTitle(kFreeItemLimit)),
+            content: Text(l10n.freeLimitBody),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(l10n.cancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(l10n.upgradeToPro),
+              ),
+            ],
+          ),
+    );
+    if (upgrade == true && mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const PaywallScreen()),
+      );
+      // Straight back into the save they were denied, with the photographs and
+      // the typing still there.
+      if (mounted && ref.read(proProvider).isPro) await _saveNamed();
+    }
   }
 
   Future<void> _removeDraft(int index) async {
@@ -258,7 +375,43 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
   Widget _buildRoomAndCategory(AppLocalizations l10n) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Named as defaults now that each row carries its own category. The
+          // room stays one per batch, because a batch is a room -- that is
+          // what walking round with the camera means.
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.batchDefaults,
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ),
+              if (_drafts.any((d) => d.category != _category))
+                TextButton(
+                  onPressed:
+                      _isSaving
+                          ? null
+                          : () => setState(() {
+                            for (final draft in _drafts) {
+                              draft.category = _category;
+                            }
+                          }),
+                  child: Text(l10n.applyToAll),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          _buildDefaultsRow(l10n),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDefaultsRow(AppLocalizations l10n) {
+    return Row(
         children: [
           Expanded(
             child: DropdownButtonFormField<String>(
@@ -304,7 +457,6 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
             ),
           ),
         ],
-      ),
     );
   }
 
@@ -380,16 +532,54 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              TextField(
-                controller: draft.price,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: InputDecoration(
-                  labelText: l10n.price,
-                  isDense: true,
-                  prefixText: settings.currencySymbol,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: draft.price,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: l10n.price,
+                        isDense: true,
+                        prefixText: settings.currencySymbol,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Per row, because the depreciation table is keyed on it and
+                  // a whole living room filed as one category is a whole
+                  // living room valued wrongly.
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      initialValue: draft.category,
+                      isExpanded: true,
+                      isDense: true,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      items:
+                          kAssetCategories
+                              .map(
+                                (c) => DropdownMenuItem(
+                                  value: c,
+                                  child: Text(
+                                    l10n.categoryLabel(c),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                      onChanged:
+                          _isSaving
+                              ? null
+                              : (v) => setState(
+                                () => draft.category = v ?? draft.category,
+                              ),
+                      decoration: const InputDecoration(isDense: true),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

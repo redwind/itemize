@@ -535,10 +535,10 @@
   "appLocked": "Itemize Locked",
   "unlock": "Unlock",
   "upgradeToPro": "Upgrade to Pro",
-  "upgradeToProSubtitle": "Insurance reports and backups. Everything else is free.",
+  "upgradeToProSubtitle": "Unlimited items, insurance reports and backups.",
   "proBadge": "PRO",
   "unlockFullPotential": "Unlock Full Potential",
-  "paywallLead": "Recording and looking after your things is free, unlimited, and stays that way. Pro is for getting it back out.",
+  "paywallLead": "Looking after what you own is the part that stays free. Pro is for going past the free ceiling — and for getting it all back out again.",
   "paywallReport": "Insurance Report",
   "paywallReportBody": "A page for every item — photos, serial number, receipt, service history and estimated current value, grouped by room and signed.",
   "paywallBackup": "Backup & Restore",
@@ -714,5 +714,193 @@
       }
     }
   },
-  "batchSaveFailed": "Could not save. Nothing was stored — your photos are still here, try again."
+  "batchSaveFailed": "Could not save. Nothing was stored — your photos are still here, try again.",
+  "freeLimitTitle": "The free version holds {limit} items",
+  "@freeLimitTitle": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "freeLimitBody": "Everything you have recorded stays exactly as it is. Unlock once to keep adding — no subscription, no account.",
+  "freeSlotsLeft": "{count, plural, =1{1 free slot left} other{{count} free slots left}}",
+  "@freeSlotsLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "freeLimitBatchCapped": "{saved} saved. The free version holds {limit} items, so {dropped} are still waiting.",
+  "@freeLimitBatchCapped": {
+    "placeholders": {
+      "saved": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      },
+      "dropped": {
+        "type": "int"
+      }
+    }
+  },
+  "paywallUnlimited": "Unlimited Items",
+  "paywallUnlimitedBody": "Record everything you own. The free version stops at {limit}; Pro does not stop.",
+  "@paywallUnlimitedBody": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "warrantyPromptTitle": "Still under warranty?",
+  "warrantyPromptBody": "A minute here is what makes the reminders work later. Leave anything you are not sure about.",
+  "warrantyPromptSkip": "Not now",
+  "warrantyYears": "{count, plural, =1{1 year} other{{count} years}}",
+  "@warrantyYears": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "warrantyNoneOption": "None",
+  "warrantyOtherDate": "Other date",
+  "warrantyPromptSaved": "{count, plural, =1{Warranty saved for 1 item} other{Warranties saved for {count} items}}",
+  "@warrantyPromptSaved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchDefaults": "Defaults for new photos",
+  "applyToAll": "Apply to all",
+  "notifWarrantyEndsTomorrow": "{name} — warranty ends tomorrow",
+  "@notifWarrantyEndsTomorrow": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notifWarrantyEndsInAWeek": "{name} — warranty ends in a week",
+  "@notifWarrantyEndsInAWeek": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notifWarrantyEndsInDays": "{name} — warranty ends in {days} days",
+  "@notifWarrantyEndsInDays": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "notifWarrantyBody": "Warranty ends {expiry}. Bought {purchased}.",
+  "@notifWarrantyBody": {
+    "placeholders": {
+      "expiry": {
+        "type": "String"
+      },
+      "purchased": {
+        "type": "String"
+      }
+    }
+  },
+  "notifJobDueToday": "{name} — {job} due today",
+  "@notifJobDueToday": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "job": {
+        "type": "String"
+      }
+    }
+  },
+  "notifJobDueInDays": "{name} — {job} due in {days} days",
+  "@notifJobDueInDays": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "job": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "notifNeverDone": "Never logged as done.",
+  "notifLastDone": "Last done {date}.",
+  "@notifLastDone": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notifRequiredForWarranty": "Required to keep the warranty valid.",
+  "notifChannelName": "Item reminders",
+  "notifChannelDescription": "Tells you before a warranty runs out or a job falls due.",
+  "purchasePending": "Waiting for approval. Pro unlocks as soon as the purchase is approved.",
+  "purchaseCancelled": "Purchase cancelled.",
+  "purchaseFailed": "Purchase failed.",
+  "purchaseAlreadyOwnedUnlinked": "The store says this is already purchased, but it is not linked to this account yet. Try Restore Purchases, or check you are signed in with the account that bought it.",
+  "restoredToPro": "Restored. You are Pro.",
+  "restoredNothingFound": "Restored, but no purchase was found on this account.",
+  "restorePurchasesFailed": "Could not restore purchases.",
+  "dashboardAttention": "Needs attention",
+  "dashboardAllClear": "Nothing needs attention right now.",
+  "attentionWarrantiesEnding": "{count, plural, =1{1 warranty ending soon} other{{count} warranties ending soon}}",
+  "@attentionWarrantiesEnding": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "attentionJobsOverdue": "{count, plural, =1{1 job overdue} other{{count} jobs overdue}}",
+  "@attentionJobsOverdue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "attentionWarrantyAtRisk": "{count, plural, =1{1 warranty at risk} other{{count} warranties at risk}}",
+  "@attentionWarrantyAtRisk": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "attentionToReview": "{count, plural, =1{1 entry to check} other{{count} entries to check}}",
+  "@attentionToReview": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "itemsCount": "{count, plural, =0{Empty} =1{1 item} other{{count} items}}",
+  "@itemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardNothingYet": "Nothing recorded yet. Photograph a room and it will fill in."
 }

@@ -28,6 +28,7 @@ final assetListProvider =
             schedules: schedules,
             warrantyEnabled: settings.warrantyRemindersEnabled,
             maintenanceEnabled: settings.maintenanceRemindersEnabled,
+            languageCode: settings.languageCode,
           );
         },
       );
@@ -36,9 +37,8 @@ final assetListProvider =
 /// Every stored item, whatever the Assets tab happens to be showing.
 ///
 /// [assetListProvider] is watched only as a change signal; the items themselves
-/// come from storage. Its state is replaced by a narrowed list whenever
-/// [AssetListNotifier.search] runs, so reading it here would quietly shrink the
-/// Care screen and the maintenance plan to match a query typed on another tab.
+/// come from storage. Screens that show a filtered view read this and narrow it
+/// themselves, so no screen's filter can shrink another's.
 final allAssetsProvider = FutureProvider<List<Asset>>((ref) {
   ref.watch(assetListProvider);
   return ref.read(assetRepositoryProvider).getAllAssets();
@@ -109,9 +109,9 @@ class AssetListNotifier extends StateNotifier<AsyncValue<List<Asset>>> {
 
   /// Handed the complete list every time it is reloaded from storage.
   ///
-  /// Called from [loadAssets] alone, deliberately never from [search]: search
-  /// replaces the state with a narrowed list, and rescheduling reminders off
-  /// that would cancel them for every item the query happened to exclude.
+  /// Reminders are rebuilt from whatever this is given, so it must only ever
+  /// be given everything: handing it a subset would cancel the reminders of
+  /// every item left out of it.
   final Future<void> Function(List<Asset>)? onReload;
 
   AssetListNotifier(this._repository, {this.onReload})

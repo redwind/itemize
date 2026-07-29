@@ -12,6 +12,7 @@ import 'package:itemize/core/utils/reminders.dart';
 import 'package:share_plus/share_plus.dart';
 // import 'package:itemize/core/utils/pdf_service.dart';
 import 'package:itemize/providers/asset_provider.dart';
+import 'package:itemize/core/utils/free_tier.dart';
 import 'package:itemize/providers/settings_provider.dart';
 import 'package:itemize/providers/pro_provider.dart';
 import 'package:itemize/ui/settings/paywall_screen.dart';
@@ -52,7 +53,25 @@ class SettingsScreen extends ConsumerWidget {
                     color: Colors.purple,
                   ),
                 ),
-                subtitle: Text(l10n.upgradeToProSubtitle),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l10n.upgradeToProSubtitle),
+                    // Stated plainly rather than as a warning: this is where
+                    // the free user stands, not a nag to move them along.
+                    Text(
+                      // isPro is false in every branch that reaches this
+                      // card, so this never sees the unlimited (null) case.
+                      l10n.freeSlotsLeft(
+                        remainingFreeSlots(
+                          currentCount: ref.watch(assetCountProvider),
+                          isPro: false,
+                        )!,
+                      ),
+                      style: TextStyle(color: Colors.purple.shade700),
+                    ),
+                  ],
+                ),
                 trailing: const Icon(
                   Icons.arrow_forward_ios,
                   size: 16,
@@ -97,7 +116,10 @@ class SettingsScreen extends ConsumerWidget {
             leading: const Icon(Icons.settings_backup_restore, color: Colors.orange),
             title: Text(l10n.restoreBackup),
             subtitle: Text(l10n.restoreBackupSubtitle),
-            trailing: proState.isPro ? null : const _ProChip(),
+            // Restoring is free even though making the backup is not: someone
+            // who paid, backed up, and reinstalled must be able to get their
+            // own data back while RevenueCat is still catching up, not be held
+            // hostage by the paywall they already cleared.
             onTap: () => _restore(context, ref),
           ),
 
@@ -454,7 +476,8 @@ class SettingsScreen extends ConsumerWidget {
 
   Future<void> _restore(BuildContext context, WidgetRef ref) async {
     final l10n = AppLocalizations.of(context)!;
-    if (!await _allowed(context, ref, l10n.authToRestore)) {
+    // No Pro gate here, deliberately: see the ListTile above for why.
+    if (!await _authenticated(context, ref, l10n.authToRestore)) {
       return;
     }
 
@@ -536,6 +559,18 @@ class SettingsScreen extends ConsumerWidget {
       return false;
     }
 
+    return _authenticated(context, ref, reason);
+  }
+
+  /// Biometric prompt only, no Pro check.
+  ///
+  /// Split out of [_allowed] for restore, which stays free of the paywall on
+  /// purpose but still deserves the same lock screen protecting backup.
+  Future<bool> _authenticated(
+    BuildContext context,
+    WidgetRef ref,
+    String reason,
+  ) async {
     if (ref.read(settingsProvider).isBiometricEnabled) {
       try {
         if (!await AuthService().authenticate(reason: reason)) return false;

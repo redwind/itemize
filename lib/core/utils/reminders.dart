@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' show Locale;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -7,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:itemize/core/utils/maintenance_planner.dart';
 import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/data/models/maintenance_schedule.dart';
+import 'package:itemize/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
@@ -46,20 +48,32 @@ class Reminders {
   /// forward as time passes and items change.
   static const int _maxPending = 60;
 
-  static const AndroidNotificationDetails _androidDetails =
+  /// Android reads a channel's name and description once, the first time a
+  /// notification is posted to it, and there is no API to rename a channel
+  /// afterwards -- only to delete it and let the next post recreate it. So an
+  /// owner who switches the app's language after their first reminder keeps
+  /// seeing that first language's channel name under Settings > Notifications,
+  /// even though every title and body from here on is correctly translated.
+  /// Deleting and recreating the channel on every language change was
+  /// considered and rejected: that also drops whatever mute or sound choice
+  /// the owner made for it, which is a worse surprise than a label that lags.
+  /// The channel id stays fixed across languages for the same reason -- it is
+  /// the identity Android tracks that choice against, not something shown to
+  /// the owner.
+  static AndroidNotificationDetails _androidDetails(AppLocalizations l10n) =>
       AndroidNotificationDetails(
         'warranty_reminders',
-        'Item reminders',
-        channelDescription:
-            'Tells you before a warranty runs out or a job falls due.',
+        l10n.notifChannelName,
+        channelDescription: l10n.notifChannelDescription,
         importance: Importance.defaultImportance,
         priority: Priority.defaultPriority,
       );
 
-  static const NotificationDetails _details = NotificationDetails(
-    android: _androidDetails,
-    iOS: DarwinNotificationDetails(),
-  );
+  static NotificationDetails _details(AppLocalizations l10n) =>
+      NotificationDetails(
+        android: _androidDetails(l10n),
+        iOS: const DarwinNotificationDetails(),
+      );
 
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
@@ -210,23 +224,32 @@ class Reminders {
   /// is cheaper than keeping a correct record of what was scheduled when — and
   /// a stale reminder for an item that has been sold or deleted is exactly the
   /// bug a diff would eventually produce.
+  /// [languageCode] is the owner's chosen interface language (already
+  /// resolved to one this app ships, per [resolveLanguage] in
+  /// settings_provider.dart), not the device locale -- a German speaker who
+  /// picked English in the app should not have that overridden by a phone set
+  /// to German, and vice versa.
   Future<void> sync(
     List<Asset> assets, {
     List<MaintenanceSchedule> schedules = const [],
     required bool warrantyEnabled,
     required bool maintenanceEnabled,
+    required String languageCode,
   }) async {
     if (!_ready) return;
     try {
       await _plugin.cancelAll();
       if (!warrantyEnabled && !maintenanceEnabled) return;
 
+      final l10n = lookupAppLocalizations(Locale(languageCode));
       final due = upcomingReminders(
         assets,
         schedules: schedules,
         warrantyEnabled: warrantyEnabled,
         maintenanceEnabled: maintenanceEnabled,
+        l10n: l10n,
       );
+      final details = _details(l10n);
       for (final reminder in due.take(_maxPending)) {
         await _plugin.zonedSchedule(
           id: reminder.id,
@@ -234,7 +257,7 @@ class Reminders {
           title: reminder.title,
           body: reminder.body,
           payload: reminder.assetId,
-          notificationDetails: _details,
+          notificationDetails: details,
           // Inexact on purpose. Exact alarms need SCHEDULE_EXACT_ALARM, which
           // Google grants only to alarm and calendar apps, and a warranty
           // reminder does not care about the difference between 10:00 and
@@ -261,6 +284,10 @@ class Reminders {
   /// Warranty and maintenance reminders are merged and sorted together rather
   /// than kept in separate queues, because the cap that follows has to drop the
   /// furthest-off reminder of either kind, not the furthest-off of each.
+  /// [l10n] defaults to English so the many call sites in tests that do not
+  /// care about language -- the ones checking lead times, ordering, ids -- do
+  /// not have to thread one through. Production always passes one explicitly,
+  /// via [sync].
   @visibleForTesting
   static List<ScheduledReminder> upcomingReminders(
     List<Asset> assets, {
@@ -268,15 +295,17 @@ class Reminders {
     bool warrantyEnabled = true,
     bool maintenanceEnabled = true,
     DateTime? now,
+    AppLocalizations? l10n,
   }) {
     final moment = now ?? DateTime.now();
+    final locale = l10n ?? lookupAppLocalizations(const Locale('en'));
     final reminders = <ScheduledReminder>[];
 
     if (warrantyEnabled) {
-      reminders.addAll(_warrantyReminders(assets, moment));
+      reminders.addAll(_warrantyReminders(assets, moment, locale));
     }
     if (maintenanceEnabled) {
-      reminders.addAll(_maintenanceReminders(assets, schedules, moment));
+      reminders.addAll(_maintenanceReminders(assets, schedules, moment, locale));
     }
 
     reminders.sort((a, b) => a.fireAt.compareTo(b.fireAt));
@@ -286,6 +315,7 @@ class Reminders {
   static Iterable<ScheduledReminder> _warrantyReminders(
     List<Asset> assets,
     DateTime moment,
+    AppLocalizations l10n,
   ) sync* {
     for (final asset in assets) {
       final expiry = asset.warrantyExpiry;
@@ -301,10 +331,15 @@ class Reminders {
           id: notificationId(asset.id, i),
           assetId: asset.id,
           fireAt: fireAt,
-          title: _warrantyTitle(leadDays, asset.name),
-          body:
-              'Warranty ends ${DateFormat.yMMMd().format(expiry)}. '
-              'Bought ${DateFormat.yMMMd().format(asset.purchaseDate)}.',
+          title: _warrantyTitle(leadDays, asset.name, l10n),
+          // Bound to l10n.localeName rather than the ambient Intl default,
+          // which is global state set (or not) elsewhere -- see the same
+          // choice in pdf_service.dart. Otherwise a French title ships next
+          // to an American-formatted date.
+          body: l10n.notifWarrantyBody(
+            DateFormat.yMMMd(l10n.localeName).format(expiry),
+            DateFormat.yMMMd(l10n.localeName).format(asset.purchaseDate),
+          ),
         );
       }
     }
@@ -314,6 +349,7 @@ class Reminders {
     List<Asset> assets,
     List<MaintenanceSchedule> schedules,
     DateTime moment,
+    AppLocalizations l10n,
   ) sync* {
     for (final due in MaintenancePlanner.plan(assets, schedules)) {
       for (var i = 0; i < kMaintenanceLeadDays.length; i++) {
@@ -330,24 +366,30 @@ class Reminders {
           fireAt: fireAt,
           title:
               leadDays == 0
-                  ? '${due.asset.name} — ${due.schedule.title} due today'
-                  : '${due.asset.name} — ${due.schedule.title} due in $leadDays days',
-          body: _maintenanceBody(due),
+                  ? l10n.notifJobDueToday(due.asset.name, due.schedule.title)
+                  : l10n.notifJobDueInDays(
+                    due.asset.name,
+                    due.schedule.title,
+                    leadDays,
+                  ),
+          body: _maintenanceBody(due, l10n),
         );
       }
     }
   }
 
-  static String _maintenanceBody(MaintenanceDue due) {
+  static String _maintenanceBody(MaintenanceDue due, AppLocalizations l10n) {
     final last =
         due.schedule.lastDoneAt == null
-            ? 'Never logged as done.'
-            : 'Last done ${DateFormat.yMMMd().format(due.schedule.lastDoneAt!)}.';
+            ? l10n.notifNeverDone
+            : l10n.notifLastDone(
+              DateFormat.yMMMd(l10n.localeName).format(due.schedule.lastDoneAt!),
+            );
 
     if (!due.schedule.requiredForWarranty) return last;
     // Worth saying on the notification itself: this is the one whose lapse
     // costs money, and it is the reason the schedule was recorded at all.
-    return '$last Required to keep the warranty valid.';
+    return '$last ${l10n.notifRequiredForWarranty}';
   }
 
   /// The reminder hour on [day], in the app's own timezone.
@@ -360,14 +402,14 @@ class Reminders {
   static tz.TZDateTime _at(DateTime day) =>
       tz.TZDateTime(tz.local, day.year, day.month, day.day, kReminderHour);
 
-  static String _warrantyTitle(int leadDays, String name) {
+  static String _warrantyTitle(int leadDays, String name, AppLocalizations l10n) {
     switch (leadDays) {
       case 1:
-        return '$name — warranty ends tomorrow';
+        return l10n.notifWarrantyEndsTomorrow(name);
       case 7:
-        return '$name — warranty ends in a week';
+        return l10n.notifWarrantyEndsInAWeek(name);
       default:
-        return '$name — warranty ends in $leadDays days';
+        return l10n.notifWarrantyEndsInDays(name, leadDays);
     }
   }
 

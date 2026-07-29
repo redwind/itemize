@@ -860,7 +860,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get upgradeToProSubtitle =>
-      'Insurance reports and backups. Everything else is free.';
+      'Unlimited items, insurance reports and backups.';
 
   @override
   String get proBadge => 'PRO';
@@ -870,7 +870,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get paywallLead =>
-      'Recording and looking after your things is free, unlimited, and stays that way. Pro is for getting it back out.';
+      'Looking after what you own is the part that stays free. Pro is for going past the free ceiling — and for getting it all back out again.';
 
   @override
   String get paywallReport => 'Insurance Report';
@@ -1246,4 +1246,219 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get batchSaveFailed =>
       'Could not save. Nothing was stored — your photos are still here, try again.';
+
+  @override
+  String freeLimitTitle(int limit) {
+    return 'The free version holds $limit items';
+  }
+
+  @override
+  String get freeLimitBody =>
+      'Everything you have recorded stays exactly as it is. Unlock once to keep adding — no subscription, no account.';
+
+  @override
+  String freeSlotsLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count free slots left',
+      one: '1 free slot left',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String freeLimitBatchCapped(int saved, int limit, int dropped) {
+    return '$saved saved. The free version holds $limit items, so $dropped are still waiting.';
+  }
+
+  @override
+  String get paywallUnlimited => 'Unlimited Items';
+
+  @override
+  String paywallUnlimitedBody(int limit) {
+    return 'Record everything you own. The free version stops at $limit; Pro does not stop.';
+  }
+
+  @override
+  String get warrantyPromptTitle => 'Still under warranty?';
+
+  @override
+  String get warrantyPromptBody =>
+      'A minute here is what makes the reminders work later. Leave anything you are not sure about.';
+
+  @override
+  String get warrantyPromptSkip => 'Not now';
+
+  @override
+  String warrantyYears(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count years',
+      one: '1 year',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get warrantyNoneOption => 'None';
+
+  @override
+  String get warrantyOtherDate => 'Other date';
+
+  @override
+  String warrantyPromptSaved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Warranties saved for $count items',
+      one: 'Warranty saved for 1 item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get batchDefaults => 'Defaults for new photos';
+
+  @override
+  String get applyToAll => 'Apply to all';
+
+  @override
+  String notifWarrantyEndsTomorrow(String name) {
+    return '$name — warranty ends tomorrow';
+  }
+
+  @override
+  String notifWarrantyEndsInAWeek(String name) {
+    return '$name — warranty ends in a week';
+  }
+
+  @override
+  String notifWarrantyEndsInDays(String name, int days) {
+    return '$name — warranty ends in $days days';
+  }
+
+  @override
+  String notifWarrantyBody(String expiry, String purchased) {
+    return 'Warranty ends $expiry. Bought $purchased.';
+  }
+
+  @override
+  String notifJobDueToday(String name, String job) {
+    return '$name — $job due today';
+  }
+
+  @override
+  String notifJobDueInDays(String name, String job, int days) {
+    return '$name — $job due in $days days';
+  }
+
+  @override
+  String get notifNeverDone => 'Never logged as done.';
+
+  @override
+  String notifLastDone(String date) {
+    return 'Last done $date.';
+  }
+
+  @override
+  String get notifRequiredForWarranty => 'Required to keep the warranty valid.';
+
+  @override
+  String get notifChannelName => 'Item reminders';
+
+  @override
+  String get notifChannelDescription =>
+      'Tells you before a warranty runs out or a job falls due.';
+
+  @override
+  String get purchasePending =>
+      'Waiting for approval. Pro unlocks as soon as the purchase is approved.';
+
+  @override
+  String get purchaseCancelled => 'Purchase cancelled.';
+
+  @override
+  String get purchaseFailed => 'Purchase failed.';
+
+  @override
+  String get purchaseAlreadyOwnedUnlinked =>
+      'The store says this is already purchased, but it is not linked to this account yet. Try Restore Purchases, or check you are signed in with the account that bought it.';
+
+  @override
+  String get restoredToPro => 'Restored. You are Pro.';
+
+  @override
+  String get restoredNothingFound =>
+      'Restored, but no purchase was found on this account.';
+
+  @override
+  String get restorePurchasesFailed => 'Could not restore purchases.';
+
+  @override
+  String get dashboardAttention => 'Needs attention';
+
+  @override
+  String get dashboardAllClear => 'Nothing needs attention right now.';
+
+  @override
+  String attentionWarrantiesEnding(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count warranties ending soon',
+      one: '1 warranty ending soon',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String attentionJobsOverdue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count jobs overdue',
+      one: '1 job overdue',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String attentionWarrantyAtRisk(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count warranties at risk',
+      one: '1 warranty at risk',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String attentionToReview(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count entries to check',
+      one: '1 entry to check',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String itemsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items',
+      one: '1 item',
+      zero: 'Empty',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dashboardNothingYet =>
+      'Nothing recorded yet. Photograph a room and it will fill in.';
 }

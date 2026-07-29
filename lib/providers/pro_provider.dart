@@ -36,8 +36,41 @@ const String _kAndroidKey = String.fromEnvironment(
 /// Keys that only ever simulate a purchase.
 bool _isTestStoreKey(String key) => key.startsWith('test_');
 
-const String _kStoreUnavailableMessage =
-    "Purchases are unavailable: this build has no live store key.";
+/// What happened on a purchase, restore or store-connection attempt.
+///
+/// Deliberately not a String: a notifier that renders its own English cannot
+/// be translated when the language changes underneath it, and turns a money
+/// screen into a UI concern it has no business owning. Each value here has a
+/// matching AppLocalizations key, translated at the point of display (the
+/// paywall) rather than at the point of decision (this file).
+enum ProOutcome {
+  /// The SDK never configured, or an offering could not be loaded -- nothing
+  /// about the customer's account, just the store not answering right now.
+  storeUnavailable,
+
+  /// Ask to Buy, or a bank 2FA step. The charge may still land later; this is
+  /// not a failure and must not be reported through the error slot.
+  purchasePending,
+
+  purchaseCancelled,
+
+  /// Catch-all for a purchase that failed for a reason with no more specific
+  /// outcome of its own.
+  purchaseFailed,
+
+  /// The store says this was already bought, but under an app user id
+  /// [restorePurchases] could not reconcile to this install.
+  purchaseAlreadyOwnedUnlinked,
+
+  purchaseSucceeded,
+
+  restoredToPro,
+
+  /// Restore succeeded as an operation but found no entitlement to grant.
+  restoredNothingFound,
+
+  restoreFailed,
+}
 
 // --- State Class ---
 class ProState {
@@ -52,16 +85,23 @@ class ProState {
   /// Price and product type are read off this rather than written into the UI,
   /// so the paywall cannot advertise a figure the user will not be charged.
   final Package? proPackage;
-  final String? errorMessage;
-  final String? successMessage;
+  final ProOutcome? errorOutcome;
+  final ProOutcome? successOutcome;
+
+  /// The raw exception behind [errorOutcome], only ever populated when
+  /// detailed-error debugging is toggled on (see [ProNotifier.toggleDetailedErrors]).
+  /// Rides alongside the translated outcome rather than replacing it, so a
+  /// debug build can show both what the customer sees and what actually broke.
+  final String? errorDetail;
 
   const ProState({
     this.isPro = false,
     this.isLoading = false,
     this.isStoreAvailable = false,
     this.proPackage,
-    this.errorMessage,
-    this.successMessage,
+    this.errorOutcome,
+    this.successOutcome,
+    this.errorDetail,
   });
 
   ProState copyWith({
@@ -69,20 +109,26 @@ class ProState {
     bool? isLoading,
     bool? isStoreAvailable,
     Package? proPackage,
-    String? errorMessage,
-    bool clearErrorMessage = false,
-    String? successMessage,
-    bool clearSuccessMessage = false,
+    ProOutcome? errorOutcome,
+    bool clearErrorOutcome = false,
+    ProOutcome? successOutcome,
+    bool clearSuccessOutcome = false,
+    String? errorDetail,
+    bool clearErrorDetail = false,
   }) {
     return ProState(
       isPro: isPro ?? this.isPro,
       isLoading: isLoading ?? this.isLoading,
       isStoreAvailable: isStoreAvailable ?? this.isStoreAvailable,
       proPackage: proPackage ?? this.proPackage,
-      errorMessage:
-          clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
-      successMessage:
-          clearSuccessMessage ? null : (successMessage ?? this.successMessage),
+      errorOutcome:
+          clearErrorOutcome ? null : (errorOutcome ?? this.errorOutcome),
+      successOutcome:
+          clearSuccessOutcome
+              ? null
+              : (successOutcome ?? this.successOutcome),
+      errorDetail:
+          clearErrorDetail ? null : (errorDetail ?? this.errorDetail),
     );
   }
 
@@ -111,6 +157,15 @@ class ProNotifier extends StateNotifier<ProState> {
   ProNotifier() : super(const ProState()) {
     _init();
   }
+
+  /// A notifier holding [initial] and never talking to a store.
+  ///
+  /// The ordinary constructor reaches for RevenueCat the moment it is built,
+  /// which a widget test has no business doing and no way to answer. This is
+  /// the seam that lets a test say "this user is Pro" or "the store is down"
+  /// and then look at what the screen does about it.
+  @visibleForTesting
+  ProNotifier.withState(super.initial);
 
   Future<void> _init() async {
     state = state.copyWith(isLoading: true);
@@ -142,7 +197,7 @@ class ProNotifier extends StateNotifier<ProState> {
       // running against a store that cannot charge.
       state = state.copyWith(
         isStoreAvailable: false,
-        errorMessage: _kStoreUnavailableMessage,
+        errorOutcome: ProOutcome.storeUnavailable,
       );
       return;
     }
@@ -171,16 +226,15 @@ class ProNotifier extends StateNotifier<ProState> {
 
       // Verify connection by getting customer info immediately after configure
       CustomerInfo customerInfo = await Purchases.getCustomerInfo();
-      state = state.copyWith(isStoreAvailable: true, clearErrorMessage: true);
+      state = state.copyWith(isStoreAvailable: true, clearErrorOutcome: true);
       _updateProStatus(customerInfo);
       await _loadOffering();
     } catch (e) {
       if (kDebugMode) print("RevenueCat init failed: $e");
-      String errorMsg = "Init failed";
-      if (_showDetailedErrors) {
-        errorMsg += ": $e";
-      }
-      state = state.copyWith(errorMessage: errorMsg);
+      // Whatever broke -- unreachable host, a store SDK rejecting the key --
+      // it lands on the same "try again later" outcome the customer sees,
+      // since none of the specific causes are things they can act on.
+      _emitError(ProOutcome.storeUnavailable, e);
     }
   }
 
@@ -189,8 +243,8 @@ class ProNotifier extends StateNotifier<ProState> {
     if (!mounted) return;
     final wasPro = state.isPro;
     _updateProStatus(info);
-    if (!wasPro && state.isPro && state.successMessage == null) {
-      state = state.copyWith(successMessage: "Success! You are now Pro.");
+    if (!wasPro && state.isPro && state.successOutcome == null) {
+      state = state.copyWith(successOutcome: ProOutcome.purchaseSucceeded);
     }
   }
 
@@ -202,7 +256,7 @@ class ProNotifier extends StateNotifier<ProState> {
   /// arrived at the paywall willing to pay was simply turned away.
   Future<void> retryStoreConnection() async {
     if (state.isStoreAvailable || state.isLoading) return;
-    state = state.copyWith(isLoading: true, clearErrorMessage: true);
+    state = state.copyWith(isLoading: true, clearErrorOutcome: true);
     await _initRevenueCat();
     state = state.copyWith(isLoading: false);
   }
@@ -252,47 +306,45 @@ class ProNotifier extends StateNotifier<ProState> {
 
   void toggleDetailedErrors() {
     _showDetailedErrors = !_showDetailedErrors;
+  }
+
+  /// Sets the error outcome the paywall will translate, plus the raw
+  /// exception alongside it -- but only when detailed-error debugging is on.
+  /// Outside of that, [error] is discarded entirely rather than stored and
+  /// left unread, so a stray customer stack trace never sits in memory (or a
+  /// crash report) for no reason.
+  void _emitError(ProOutcome outcome, [Object? error]) {
+    final detail = (error != null && _showDetailedErrors) ? '$error' : null;
     state = state.copyWith(
-      errorMessage: "Detailed errors: $_showDetailedErrors",
+      errorOutcome: outcome,
+      errorDetail: detail,
+      clearErrorDetail: detail == null,
     );
   }
 
   Future<void> restorePurchases() async {
     if (!state.isStoreAvailable) {
-      state = state.copyWith(errorMessage: _kStoreUnavailableMessage);
+      _emitError(ProOutcome.storeUnavailable);
       return;
     }
     try {
       state = state.copyWith(
         isLoading: true,
-        clearErrorMessage: true,
-        clearSuccessMessage: true,
+        clearErrorOutcome: true,
+        clearSuccessOutcome: true,
+        clearErrorDetail: true,
       );
       CustomerInfo customerInfo = await Purchases.restorePurchases();
       _updateProStatus(customerInfo);
       if (customerInfo.entitlements.all[kProEntitlementId]?.isActive == true) {
-        state = state.copyWith(
-          successMessage: "Purchases restored successfully. You are Pro!",
-        );
+        state = state.copyWith(successOutcome: ProOutcome.restoredToPro);
       } else {
-        state = state.copyWith(
-          successMessage: "Purchases restored. No Pro entitlement found.",
-        );
+        state = state.copyWith(successOutcome: ProOutcome.restoredNothingFound);
       }
     } on PlatformException catch (e) {
-      String errorMsg = "Restore failed";
-      if (_showDetailedErrors) {
-        errorMsg += ": $e";
-      } else {
-        errorMsg = e.message ?? "Unknown device error";
-      }
-      state = state.copyWith(errorMessage: errorMsg);
+      _emitError(ProOutcome.restoreFailed, e);
     } catch (e) {
-      String errorMsg = "Restore failed";
-      if (_showDetailedErrors) {
-        errorMsg += ": $e";
-      }
-      state = state.copyWith(errorMessage: errorMsg);
+      _emitError(ProOutcome.restoreFailed, e);
     } finally {
       state = state.copyWith(isLoading: false);
     }
@@ -300,14 +352,15 @@ class ProNotifier extends StateNotifier<ProState> {
 
   Future<void> purchasePro() async {
     if (!state.isStoreAvailable) {
-      state = state.copyWith(errorMessage: _kStoreUnavailableMessage);
+      _emitError(ProOutcome.storeUnavailable);
       return;
     }
     try {
       state = state.copyWith(
         isLoading: true,
-        clearErrorMessage: true,
-        clearSuccessMessage: true,
+        clearErrorOutcome: true,
+        clearSuccessOutcome: true,
+        clearErrorDetail: true,
       );
       // Charge the very package the paywall quoted a price for. Re-fetching
       // here could pick up a different one and bill an amount the user was
@@ -323,17 +376,16 @@ class ProNotifier extends StateNotifier<ProState> {
               PurchaseParams.package(package),
             )).customerInfo;
         _updateProStatus(info);
-        state = state.copyWith(successMessage: "Success! You are now Pro.");
+        state = state.copyWith(successOutcome: ProOutcome.purchaseSucceeded);
       } else {
-        state = state.copyWith(
-          errorMessage: "No offerings available. Please check configuration.",
-        );
+        // No offering configured server-side, not a payment failure -- the
+        // customer's card was never touched.
+        _emitError(ProOutcome.storeUnavailable);
       }
 
       // Mock success for now since we don't have keys
       // state = state.copyWith(isPro: true);
     } on PlatformException catch (e) {
-      String errorMsg = "Purchase failed";
       var errorCode = PurchasesErrorHelper.getErrorCode(e);
       if (errorCode == PurchasesErrorCode.productAlreadyPurchasedError) {
         // Owned according to the store, which is not the same as entitled
@@ -345,41 +397,24 @@ class ProNotifier extends StateNotifier<ProState> {
         // the server to reconcile it instead of taking the error code's word.
         await restorePurchases();
         if (!state.isPro) {
-          state = state.copyWith(
-            clearSuccessMessage: true,
-            errorMessage:
-                "The store says this is already purchased, but it is not "
-                "linked to this account yet. Try Restore Purchases again, or "
-                "check you are signed in with the account that bought it.",
-          );
+          state = state.copyWith(clearSuccessOutcome: true);
+          _emitError(ProOutcome.purchaseAlreadyOwnedUnlinked, e);
         }
-        return; // Skip setting errorMessage
+        return; // Skip the generic failure outcome below
       } else if (errorCode == PurchasesErrorCode.paymentPendingError) {
         // Ask to Buy, or a bank that wants a second factor. The charge may yet
         // go through, so this is not a failure and must not be reported as one.
         // _onCustomerInfo unlocks the app if and when approval arrives.
-        state = state.copyWith(
-          successMessage:
-              "Waiting for approval. Pro unlocks as soon as the purchase is "
-              "approved.",
-        );
+        state = state.copyWith(successOutcome: ProOutcome.purchasePending);
         return;
       } else if (errorCode == PurchasesErrorCode.purchaseCancelledError) {
-        errorMsg = "Purchase cancelled.";
+        // Nothing to debug about a deliberate cancel, so no detail is kept.
+        _emitError(ProOutcome.purchaseCancelled);
       } else {
-        if (_showDetailedErrors) {
-          errorMsg += ": $e";
-        } else {
-          errorMsg = e.message ?? errorMsg;
-        }
+        _emitError(ProOutcome.purchaseFailed, e);
       }
-      state = state.copyWith(errorMessage: errorMsg);
     } catch (e) {
-      String errorMsg = "Purchase failed";
-      if (_showDetailedErrors) {
-        errorMsg += ": $e";
-      }
-      state = state.copyWith(errorMessage: errorMsg);
+      _emitError(ProOutcome.purchaseFailed, e);
     } finally {
       state = state.copyWith(isLoading: false);
     }
@@ -395,8 +430,9 @@ class ProNotifier extends StateNotifier<ProState> {
   Future<void> debugCancelPro() async {
     state = state.copyWith(
       isPro: false,
-      successMessage: null,
-      errorMessage: null,
+      clearSuccessOutcome: true,
+      clearErrorOutcome: true,
+      clearErrorDetail: true,
     );
 
     // Attempt to open the respective store's subscription management page

@@ -2,10 +2,14 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:itemize/core/theme/app_theme.dart';
+import 'package:itemize/core/utils/maintenance_planner.dart';
+import 'package:itemize/core/utils/review_status.dart';
+import 'package:itemize/core/utils/warranty_status.dart';
 import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/providers/asset_provider.dart';
 import 'package:itemize/providers/settings_provider.dart';
 import 'package:itemize/ui/assets/asset_list_screen.dart';
+import 'package:itemize/ui/care/care_screen.dart';
 import 'package:itemize/l10n/app_localizations.dart';
 import 'package:itemize/l10n/domain_labels.dart';
 
@@ -15,8 +19,9 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final totalValue = ref.watch(totalValueProvider);
-    // Every item, not the Assets tab's current filter -- the pie is a picture of
-    // the whole inventory and must not redraw itself around someone's search.
+    // Every item, not the Assets tab's current filter -- the pie and the room
+    // grid are a picture of the whole inventory and must not redraw themselves
+    // around someone's search.
     final assetsAsync = ref.watch(allAssetsProvider);
     final l10n = AppLocalizations.of(context)!;
 
@@ -29,8 +34,16 @@ class DashboardScreen extends ConsumerWidget {
             _buildTotalValueCard(totalValue, l10n, ref),
             _buildCoverageWarning(ref, l10n),
             const SizedBox(height: 24),
+            // Leads the screen, above the chart: "is anything about to cost me
+            // money" is the question worth answering before a picture of what
+            // is merely owned.
+            _buildAttentionSection(context, ref, l10n),
+            const SizedBox(height: 24),
+            // Trimmed from 250: with the attention section now above it, the
+            // chart is a picture of the inventory rather than the reason to
+            // open the screen, and does not need the room it used to have.
             SizedBox(
-              height: 250,
+              height: 200,
               child: assetsAsync.when(
                 data: (assets) => _buildChart(assets, ref, l10n),
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -39,7 +52,11 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 24),
-            _buildRoomGrid(context, l10n),
+            assetsAsync.when(
+              data: (assets) => _buildRoomGrid(context, assets, ref, l10n),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (_, __) => Center(child: Text(l10n.errorLoadingChart)),
+            ),
           ],
         ),
       ),
@@ -173,11 +190,204 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildChart(
-    List<dynamic> assets,
+  /// "Is anything about to cost me money" — built entirely from planners the
+  /// Care screen already trusts, never re-derived here, so the two screens
+  /// can never disagree about what counts as urgent.
+  ///
+  /// Assets and the maintenance plan load separately (the plan waits on the
+  /// asset fetch plus a schedules query), so this only blocks on assets: rows
+  /// that need nothing but the asset list appear as soon as they can, and the
+  /// two maintenance-derived rows fade in once the plan resolves rather than
+  /// holding the whole section behind a second spinner.
+  Widget _buildAttentionSection(
+    BuildContext context,
     WidgetRef ref,
     AppLocalizations l10n,
   ) {
+    final assetsAsync = ref.watch(allAssetsProvider);
+    final planAsync = ref.watch(maintenancePlanProvider);
+
+    return assetsAsync.when(
+      loading:
+          () => _attentionShell(
+            l10n,
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          ),
+      error:
+          (err, _) => _attentionShell(
+            l10n,
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                l10n.genericError('$err'),
+                style: const TextStyle(color: AppTheme.textSecondary),
+              ),
+            ),
+          ),
+      data: (assets) {
+        final warrantiesEnding =
+            WarrantyStatus.group(assets)[WarrantyStanding.expiringSoon]!
+                .length;
+        final toReview = ReviewStatus.needingReview(assets).length;
+
+        final plan = planAsync.valueOrNull;
+        final warrantyAtRisk =
+            plan == null
+                ? null
+                : MaintenancePlanner.threateningWarranty(plan).length;
+        final jobsOverdue =
+            plan == null
+                ? null
+                : MaintenancePlanner.needingAttention(plan).length;
+
+        final rows = <Widget>[
+          // Sorted by urgency, not by data source: the warranty-put-at-risk
+          // by a skipped service is the one claim in the app worth real
+          // money, so it leads and it is the only row styled as a warning.
+          if (warrantyAtRisk != null && warrantyAtRisk > 0)
+            _attentionRow(
+              context,
+              l10n.attentionWarrantyAtRisk(warrantyAtRisk),
+              icon: Icons.gpp_maybe,
+              color: AppTheme.errorRed,
+              strong: true,
+            ),
+          if (jobsOverdue != null && jobsOverdue > 0)
+            _attentionRow(
+              context,
+              l10n.attentionJobsOverdue(jobsOverdue),
+              icon: Icons.build_circle_outlined,
+              color: Colors.orange.shade800,
+            ),
+          if (warrantiesEnding > 0)
+            _attentionRow(
+              context,
+              l10n.attentionWarrantiesEnding(warrantiesEnding),
+              icon: Icons.shield_outlined,
+              color: Colors.amber.shade800,
+            ),
+          if (toReview > 0)
+            _attentionRow(
+              context,
+              l10n.attentionToReview(toReview),
+              icon: Icons.fact_check_outlined,
+              color: AppTheme.textSecondary,
+            ),
+        ];
+
+        if (rows.isEmpty && plan == null) {
+          // Nothing to show yet, but the plan hasn't answered either: staying
+          // quiet here would read as "all clear" for a heartbeat and then
+          // possibly contradict itself the moment the plan lands.
+          return _attentionShell(
+            l10n,
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Center(
+                child: SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
+          );
+        }
+
+        if (rows.isEmpty) {
+          return _attentionShell(
+            l10n,
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Text(
+                l10n.dashboardAllClear,
+                style: const TextStyle(color: AppTheme.textSecondary),
+              ),
+            ),
+          );
+        }
+
+        return _attentionShell(l10n, Column(children: rows));
+      },
+    );
+  }
+
+  Widget _attentionShell(AppLocalizations l10n, Widget child) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.dashboardAttention.toUpperCase(),
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textSecondary,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 10),
+        child,
+      ],
+    );
+  }
+
+  /// The Care tab is only reachable by tapping its item in [MainScreen]'s
+  /// bottom bar, and that index is private state with no way in from here
+  /// without editing a file every other screen is also mid-change on. Pushing
+  /// [CareScreen] as its own route gets to the same content honestly, at the
+  /// cost of a back button instead of a tab switch.
+  Widget _attentionRow(
+    BuildContext context,
+    String label, {
+    required IconData icon,
+    required Color color,
+    bool strong = false,
+  }) {
+    return GestureDetector(
+      onTap:
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CareScreen()),
+          ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: strong ? color.withAlpha(20) : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: strong ? Border.all(color: color.withAlpha(70)) : null,
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontWeight: strong ? FontWeight.bold : FontWeight.w600,
+                  color: strong ? color : AppTheme.textPrimary,
+                  fontSize: strong ? 15 : 14,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              color: AppTheme.textSecondary.withAlpha(150),
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChart(List<Asset> assets, WidgetRef ref, AppLocalizations l10n) {
     final settings = ref.watch(settingsProvider);
     if (assets.isEmpty) {
       return Center(child: Text(l10n.noAssetsData));
@@ -186,23 +396,22 @@ class DashboardScreen extends ConsumerWidget {
     // Grouped by room rather than category: it matches the room grid directly
     // below, and every item has a room, whereas items carried over from before
     // the two were split have no category yet.
-    final Map<String, double> categoryValues = {};
-    for (var asset in assets) {
-      final room = asset.room;
-      categoryValues[room] = (categoryValues[room] ?? 0) + asset.price;
+    final Map<String, double> roomValues = {};
+    for (final asset in assets) {
+      roomValues[asset.room] = (roomValues[asset.room] ?? 0) + asset.price;
     }
 
     // Sort by value desc
     final sortedEntries =
-        categoryValues.entries.toList()
+        roomValues.entries.toList()
           ..sort((a, b) => b.value.compareTo(a.value));
+
+    final colors = roomColorPalette(roomValues.keys);
 
     final sections =
         sortedEntries.map((e) {
-          final color =
-              Colors.primaries[e.key.hashCode % Colors.primaries.length];
           return PieChartSectionData(
-            color: color,
+            color: colors[e.key]!,
             value: e.value,
             title: '',
             radius: 20,
@@ -232,9 +441,6 @@ class DashboardScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children:
                 sortedEntries.map((e) {
-                  final color =
-                      Colors.primaries[e.key.hashCode %
-                          Colors.primaries.length];
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Row(
@@ -243,7 +449,7 @@ class DashboardScreen extends ConsumerWidget {
                           width: 12,
                           height: 12,
                           decoration: BoxDecoration(
-                            color: color,
+                            color: colors[e.key]!,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -255,6 +461,7 @@ class DashboardScreen extends ConsumerWidget {
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -275,8 +482,41 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildRoomGrid(BuildContext context, AppLocalizations l10n) {
-    const rooms = kAssetRooms;
+  /// Only the rooms something is actually kept in, each with what it holds.
+  ///
+  /// The old grid was the six fixed rooms every install starts with, shown
+  /// whether or not anything was ever put in them — "Garage" for a flat with
+  /// none, and no count or value on any of them. This is a picture of the
+  /// inventory as it stands, not of the onboarding form.
+  Widget _buildRoomGrid(
+    BuildContext context,
+    List<Asset> assets,
+    WidgetRef ref,
+    AppLocalizations l10n,
+  ) {
+    final settings = ref.watch(settingsProvider);
+
+    final Map<String, List<Asset>> byRoom = {};
+    for (final asset in assets) {
+      byRoom.putIfAbsent(asset.room, () => []).add(asset);
+    }
+
+    if (byRoom.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Text(
+          l10n.dashboardNothingYet,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: AppTheme.textSecondary),
+        ),
+      );
+    }
+
+    final colors = roomColorPalette(byRoom.keys);
+    final rooms =
+        byRoom.keys.toList()..sort(
+          (a, b) => roomTotal(byRoom[b]!).compareTo(roomTotal(byRoom[a]!)),
+        );
 
     return GridView.builder(
       shrinkWrap: true,
@@ -285,17 +525,35 @@ class DashboardScreen extends ConsumerWidget {
         crossAxisCount: 2,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 1.5,
+        // A fixed height rather than an aspect ratio: the card now carries a
+        // count and a value line on top of the room name, and a ratio tuned
+        // for the old two-line card clipped the new ones on a narrow phone.
+        mainAxisExtent: 140,
       ),
       itemCount: rooms.length,
       itemBuilder: (context, index) {
         final room = rooms[index];
-        return _buildRoomCard(context, room, l10n);
+        final items = byRoom[room]!;
+        return _buildRoomCard(
+          context,
+          room,
+          items,
+          colors[room]!,
+          settings,
+          l10n,
+        );
       },
     );
   }
 
-  Widget _buildRoomCard(BuildContext context, String room, AppLocalizations l10n) {
+  Widget _buildRoomCard(
+    BuildContext context,
+    String room,
+    List<Asset> items,
+    Color color,
+    AppSettings settings,
+    AppLocalizations l10n,
+  ) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -304,27 +562,71 @@ class DashboardScreen extends ConsumerWidget {
         );
       },
       child: Container(
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Icon could be dynamic based on room name
-            Icon(
-              Icons.room_preferences,
-              color: AppTheme.primaryBlue.withAlpha(180),
-              size: 30,
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withAlpha(30),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.room_preferences, color: color, size: 20),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Text(
               l10n.roomLabel(room),
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              l10n.itemsCount(items.length),
+              style: const TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: 12,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              settings.formatAmount(roomTotal(items)),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
       ),
     );
   }
+}
+
+/// What a room's contents add up to.
+double roomTotal(List<Asset> items) =>
+    items.fold(0.0, (sum, asset) => sum + asset.price);
+
+/// One colour per room, assigned so no two ever land on the same one.
+///
+/// The old assignment was `Colors.primaries[room.hashCode % length]`, which
+/// two room names can hash into the same slot under — the pie chart and grid
+/// would then show two rooms in identical colour with nothing to tell them
+/// apart. Assigning by index over the alphabetised set of rooms actually
+/// present is deterministic (a room keeps its colour across rebuilds) and
+/// collision-free as long as there are no more distinct rooms than
+/// `Colors.primaries` has entries, which covers every real inventory.
+Map<String, Color> roomColorPalette(Iterable<String> rooms) {
+  final sorted = rooms.toSet().toList()..sort();
+  return {
+    for (var i = 0; i < sorted.length; i++)
+      sorted[i]: Colors.primaries[i % Colors.primaries.length],
+  };
 }
