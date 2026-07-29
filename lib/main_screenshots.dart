@@ -363,6 +363,34 @@ Future<void> main() async {
 
   final prefs = await SharedPreferences.getInstance();
 
+  // Past the welcome screen and the lock before the walk starts.
+  //
+  // A fresh install is the honest state to screenshot from in every respect
+  // but this one: OnboardingGate holds WelcomeScreen in front of MainScreen
+  // until this flag is set, and the walk has no way through it. Left unset,
+  // every "screen" the harness captures is the welcome screen -- and it does
+  // not fail while doing it, it just quietly photographs the same thing
+  // fourteen times.
+  await prefs.setBool('hasOnboarded', true);
+  await prefs.setBool('isBiometricEnabled', false);
+
+  // Pinned rather than inherited from the simulator.
+  //
+  // A fresh install now takes its currency from the device region, which is
+  // right for a real owner and wrong for a store listing: shots taken on a
+  // Vietnamese simulator came out priced in dong for a listing aimed at
+  // dollars and euros. Override per run:
+  //   flutter run -t lib/main_screenshots.dart --dart-define=SHOT_CURRENCY=EUR
+  //                                            --dart-define=SHOT_LANGUAGE=de
+  await prefs.setString(
+    'currencyCode',
+    const String.fromEnvironment('SHOT_CURRENCY', defaultValue: 'USD'),
+  );
+  await prefs.setString(
+    'languageCode',
+    const String.fromEnvironment('SHOT_LANGUAGE', defaultValue: 'en'),
+  );
+
   runApp(
     ProviderScope(
       overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
