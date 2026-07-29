@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
 import 'package:intl/intl.dart';
+import 'package:itemize/core/utils/amount.dart';
 import 'package:itemize/core/utils/nameplate_parser.dart';
 
 class OCRService {
@@ -29,12 +31,19 @@ class OCRService {
     return NameplateParser.parse(recognizedText.text);
   }
 
-  Future<Map<String, dynamic>> scanReceipt(String imagePath) async {
+  /// [locale] decides what a lone separator followed by three digits means.
+  /// A German till roll prints 1.234,56 for what a British one prints as
+  /// 1,234.56, and the app's own language is the best guess available at the
+  /// only point where the two are genuinely ambiguous.
+  Future<Map<String, dynamic>> scanReceipt(
+    String imagePath, {
+    String locale = 'en',
+  }) async {
     final inputImage = InputImage.fromFilePath(imagePath);
     final recognizedText = await _textRecognizer.processImage(inputImage);
     final text = recognizedText.text;
 
-    return _parseReceiptText(text);
+    return parseReceiptText(text, locale: locale);
   }
 
   void close() {
@@ -42,7 +51,13 @@ class OCRService {
     _barcodeScanner.close();
   }
 
-  Map<String, dynamic> _parseReceiptText(String text) {
+  /// Visible for testing: the parsing is the part worth pinning down, and it
+  /// needs no camera to exercise.
+  @visibleForTesting
+  static Map<String, dynamic> parseReceiptText(
+    String text, {
+    String locale = 'en',
+  }) {
     DateTime? date;
     double? price;
     String? possibleName;
@@ -55,19 +70,24 @@ class OCRService {
     }
 
     // Price Regex (Find largest price generally)
-    // Matches $10.99, 10.99 €, etc.
+    // Matches $10.99, 10.99 €, 1.234,56 and 1 234,56.
+    //
+    // Thousands are grouped with a space in French, and a till prints it as a
+    // non-breaking or narrow no-break one, so all three are accepted. Without
+    // them "1 234,56" matched only its tail and the receipt read as 234,56.
     final priceRegex = RegExp(
-      r'[\$€£¥]?\s?\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?',
+      r'[\$€£¥]?\s?\d{1,3}(?:[.,   ]\d{3})*(?:[.,]\d{2})?',
     );
+    // Anything unreadable is dropped rather than counted as zero. The total is
+    // picked by size below, and a wrongly-parsed line used to arrive as either
+    // a 0 that lost, or -- worse, when 1.234,56 collapsed to a bare 1234 -- a
+    // number large enough to win and be filled into the price field.
     final prices =
-        priceRegex.allMatches(text).map((m) {
-          String clean = m.group(0)!.replaceAll(RegExp(r'[^\d.,]'), '');
-          // Handle comma decimals vs dot decimals usually tricky, assume dot or last separator is decimal
-          if (clean.contains(',')) {
-            clean = clean.replaceAll(',', '.'); // Naive replacement
-          }
-          return double.tryParse(clean) ?? 0.0;
-        }).toList();
+        priceRegex
+            .allMatches(text)
+            .map((m) => parseAmount(m.group(0)!, locale: locale))
+            .whereType<double>()
+            .toList();
 
     if (prices.isNotEmpty) {
       // Heuristic: Total is usually the largest number

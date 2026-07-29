@@ -20,6 +20,7 @@
   "nameRequired": "Bezeichnung ist erforderlich",
   "price": "Preis",
   "fieldRequired": "Erforderlich",
+  "invalidAmount": "Gib einen gültigen Betrag ein",
   "currency": "Währung",
   "room": "Raum",
   "category": "Kategorie",

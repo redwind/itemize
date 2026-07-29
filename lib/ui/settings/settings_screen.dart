@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:itemize/l10n/app_localizations.dart';
 import 'package:itemize/core/theme/app_theme.dart';
+import 'package:itemize/core/utils/amount.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:itemize/core/utils/auth_service.dart';
 import 'package:itemize/core/utils/backup_service.dart';
@@ -332,7 +333,9 @@ class SettingsScreen extends ConsumerWidget {
     if (entered == null) return;
     await ref
         .read(settingsProvider.notifier)
-        .setCoverageLimit(double.tryParse(entered.trim()) ?? 0);
+        .setCoverageLimit(
+          parseAmount(entered, locale: settings.languageCode) ?? 0,
+        );
   }
 
   /// Opens the report preview.

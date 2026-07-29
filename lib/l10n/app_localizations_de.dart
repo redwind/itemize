@@ -73,6 +73,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get fieldRequired => 'Erforderlich';
 
   @override
+  String get invalidAmount => 'Gib einen gültigen Betrag ein';
+
+  @override
   String get currency => 'Währung';
 
   @override

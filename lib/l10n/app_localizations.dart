@@ -220,6 +220,12 @@ abstract class AppLocalizations {
   /// **'Required'**
   String get fieldRequired;
 
+  /// Validation shown when a price cannot be read as a number
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid amount'**
+  String get invalidAmount;
+
   /// No description provided for @currency.
   ///
   /// In en, this message translates to:

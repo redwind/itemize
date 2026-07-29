@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:itemize/core/catalog/asset_catalog.dart';
+import 'package:itemize/core/utils/amount.dart';
 import 'package:itemize/core/utils/catalog_image.dart';
 import 'package:itemize/core/utils/image_storage.dart';
 import 'package:itemize/core/utils/ocr_service.dart';
@@ -313,7 +314,10 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
     setState(() => _isProcessingAI = true);
 
     try {
-      final data = await _ocrService.scanReceipt(image.path);
+      final data = await _ocrService.scanReceipt(
+        image.path,
+        locale: ref.read(settingsProvider).languageCode,
+      );
       // Kept as the receipt rather than as the item's photo. Replacing the
       // cover here, as this used to, left the owner with a picture of a till
       // roll where the picture of the thing they own should be.
@@ -362,7 +366,9 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
     final asset = Asset(
       id: widget.existing?.id ?? const Uuid().v4(),
       name: _nameController.text.trim(),
-      price: double.tryParse(_priceController.text) ?? 0.0,
+      price:
+          parseAmount(_priceController.text, locale: settings.languageCode) ??
+          0.0,
       currency: settings.currencyCode,
       room: _room,
       category: _category,
@@ -520,11 +526,20 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
                                 prefixText: settings.currencySymbol,
                                 prefixStyle: const TextStyle(fontSize: 16),
                               ),
-                              validator:
-                                  (v) =>
-                                      (v == null || v.isEmpty)
-                                          ? l10n.fieldRequired
-                                          : null,
+                              // Rejects what it cannot read rather than
+                              // letting it through to be stored as zero.
+                              validator: (v) {
+                                if (v == null || v.trim().isEmpty) {
+                                  return l10n.fieldRequired;
+                                }
+                                return parseAmount(
+                                          v,
+                                          locale: settings.languageCode,
+                                        ) ==
+                                        null
+                                    ? l10n.invalidAmount
+                                    : null;
+                              },
                             ),
                           ),
                           const SizedBox(width: 12),

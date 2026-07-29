@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:itemize/core/utils/amount.dart';
 import 'package:itemize/core/utils/image_storage.dart';
 import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/providers/asset_provider.dart';
@@ -99,7 +100,8 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
 
     setState(() => _isSaving = true);
 
-    final currency = ref.read(settingsProvider).currencyCode;
+    final settings = ref.read(settingsProvider);
+    final currency = settings.currencyCode;
     final notifier = ref.read(assetListProvider.notifier);
     final now = DateTime.now();
 
@@ -108,7 +110,9 @@ class _QuickCaptureScreenState extends ConsumerState<QuickCaptureScreen> {
         Asset(
           id: const Uuid().v4(),
           name: draft.name.text.trim(),
-          price: double.tryParse(draft.price.text.trim()) ?? 0,
+          // Optional here, so an unreadable amount is the same as none.
+          price:
+              parseAmount(draft.price.text, locale: settings.languageCode) ?? 0,
           currency: currency,
           room: _room,
           category: _category,

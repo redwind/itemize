@@ -73,6 +73,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fieldRequired => 'Required';
 
   @override
+  String get invalidAmount => 'Enter a valid amount';
+
+  @override
   String get currency => 'Currency';
 
   @override

@@ -37,6 +37,10 @@
   "nameRequired": "Name is required",
   "price": "Price",
   "fieldRequired": "Required",
+  "invalidAmount": "Enter a valid amount",
+  "@invalidAmount": {
+    "description": "Validation shown when a price cannot be read as a number"
+  },
   "currency": "Currency",
   "room": "Room",
   "category": "Category",

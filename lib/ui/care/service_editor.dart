@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:itemize/core/utils/amount.dart';
 import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/data/models/maintenance_schedule.dart';
 import 'package:itemize/data/models/service_record.dart';
@@ -91,7 +92,14 @@ class _ServiceEditorState extends State<_ServiceEditor> {
         description: _description.text.trim().isEmpty
             ? null
             : _description.text.trim(),
-        cost: double.tryParse(_cost.text.trim()) ?? 0,
+        // The app's own locale, which main.dart sets from the language
+        // setting, so a comma means here what it means on the keyboard.
+        cost:
+            parseAmount(
+              _cost.text,
+              locale: Localizations.localeOf(context).languageCode,
+            ) ??
+            0,
         provider:
             _provider.text.trim().isEmpty ? null : _provider.text.trim(),
         scheduleId: _scheduleId,
