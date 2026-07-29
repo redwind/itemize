@@ -1469,4 +1469,38 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get dashboardNothingYet =>
       'Noch nichts erfasst. Fotografiere einen Raum, dann füllt es sich.';
+
+  @override
+  String get roomBathroom => 'Badezimmer';
+
+  @override
+  String get roomDiningRoom => 'Esszimmer';
+
+  @override
+  String get roomBasement => 'Keller';
+
+  @override
+  String get roomKidsRoom => 'Kinderzimmer';
+
+  @override
+  String get roomHallway => 'Flur';
+
+  @override
+  String get roomGarden => 'Garten und Balkon';
+
+  @override
+  String get privacyPolicy => 'Datenschutzerklärung';
+
+  @override
+  String get termsOfUse => 'Nutzungsbedingungen';
+
+  @override
+  String get paywallSeeSample => 'Beispielbericht ansehen';
+
+  @override
+  String get sampleReportTitle => 'Beispielbericht';
+
+  @override
+  String get sampleReportNote =>
+      'Das ist das Dokument, das Pro erzeugt. Das Teilen ist im Beispiel deaktiviert.';
 }

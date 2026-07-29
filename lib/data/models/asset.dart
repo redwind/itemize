@@ -1,12 +1,24 @@
 import 'dart:convert';
 
 /// Where an item is kept.
+///
+/// Ordered as a walk through a home, not alphabetically: [first] is the
+/// default room on the add screen and Quick Capture, and [last] is where
+/// rooms from older data land if they no longer match anything (see
+/// `kAssetRooms.last` in add_item_screen.dart). Insert new rooms in the
+/// middle; changing either end silently changes those two behaviours.
 const List<String> kAssetRooms = [
   'Living Room',
   'Kitchen',
+  'Dining Room',
+  'Bathroom',
   'Bedroom',
+  "Kids' Room",
   'Office',
+  'Hallway',
+  'Basement',
   'Garage',
+  'Garden & Balcony',
   'Other',
 ];
 

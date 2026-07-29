@@ -2,8 +2,70 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:itemize/core/utils/free_tier.dart';
+import 'package:itemize/data/models/asset.dart';
+import 'package:itemize/providers/asset_provider.dart';
 import 'package:itemize/providers/pro_provider.dart';
 import 'package:itemize/l10n/app_localizations.dart';
+import 'package:itemize/ui/settings/pdf_preview_screen.dart';
+
+/// How many items the sample report shows.
+///
+/// Enough to fill a room table and give the per-item detail pages something
+/// to say; a 200-item inventory rendered in full would be slow to build and
+/// would not sell the idea any harder than three items do.
+const int kSampleReportItemCap = 3;
+
+/// Items to build the sample report from: the owner's own, when there are
+/// any, because a report about the sofa the owner is looking at is far more
+/// persuasive than one about a sofa that is not theirs, and it costs nothing
+/// extra to build from data already on the device.
+List<Asset> sampleReportAssets(List<Asset> owned, AppLocalizations l10n) {
+  if (owned.isNotEmpty) return owned.take(kSampleReportItemCap).toList();
+  return buildDemoSampleAssets(l10n);
+}
+
+/// Plausible stand-in items for a paywall visitor with nothing recorded yet.
+///
+/// Named from the same item-name catalog the app already translates, so the
+/// sample reads correctly in whatever language the paywall is shown in.
+/// Dated so the two columns the sample exists to sell -- the depreciation
+/// estimate and the warranty date -- both actually have something in them;
+/// an empty-columned sample would argue against buying, not for it.
+List<Asset> buildDemoSampleAssets(AppLocalizations l10n) {
+  final now = DateTime.now();
+  return [
+    Asset(
+      id: 'sample-sofa',
+      name: l10n.itemSofa,
+      price: 1200,
+      currency: 'USD',
+      room: kAssetRooms.first,
+      category: 'Furniture',
+      purchaseDate: now.subtract(const Duration(days: 365 * 3)),
+      warrantyExpiry: now.subtract(const Duration(days: 365)),
+    ),
+    Asset(
+      id: 'sample-television',
+      name: l10n.itemTelevision,
+      price: 899,
+      currency: 'USD',
+      room: kAssetRooms.first,
+      category: 'Electronics',
+      purchaseDate: now.subtract(const Duration(days: 365 * 2)),
+      warrantyExpiry: now.add(const Duration(days: 180)),
+    ),
+    Asset(
+      id: 'sample-washing-machine',
+      name: l10n.itemWashingMachine,
+      price: 650,
+      currency: 'USD',
+      room: 'Basement',
+      category: 'Appliances',
+      purchaseDate: now.subtract(const Duration(days: 365 * 4)),
+      warrantyExpiry: now.subtract(const Duration(days: 400)),
+    ),
+  ];
+}
 
 /// Where a [ProOutcome] becomes user-facing text. Kept beside the one screen
 /// that shows purchase outcomes today, not on [ProState] itself, so the
@@ -50,6 +112,32 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(proProvider.notifier).retryStoreConnection();
     });
+  }
+
+  /// Opens the real Pro report, built from what's already on the device.
+  ///
+  /// Reads whatever [allAssetsProvider] already holds rather than its
+  /// `.future`: the paywall is reached from a tab that has always already
+  /// watched it, so the value is normally there, and `.future` is not safe to
+  /// read imperatively here -- this provider's own `ref.watch` on
+  /// [assetListProvider] means it can still be mid-rebuild the first time
+  /// anything touches it, and a `.future` captured in that window is
+  /// abandoned by the rebuild and never completes. An inventory that has not
+  /// loaded yet reads the same as an empty one and falls back to the demo
+  /// items, which beats a button that silently does nothing.
+  void _showSampleReport() {
+    final l10n = AppLocalizations.of(context)!;
+    final owned = ref.read(allAssetsProvider).valueOrNull ?? const <Asset>[];
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (_) => PdfPreviewScreen(
+              assets: sampleReportAssets(owned, l10n),
+              sample: true,
+            ),
+      ),
+    );
   }
 
   @override
@@ -153,6 +241,18 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                   Icons.fingerprint,
                   l10n.paywallBiometric,
                   l10n.paywallBiometricBody,
+                ),
+
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _showSampleReport,
+                  icon: const Icon(Icons.visibility_outlined),
+                  label: Text(l10n.paywallSeeSample),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.purple,
+                    side: const BorderSide(color: Colors.purple),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
                 ),
 
                 const SizedBox(height: 32),

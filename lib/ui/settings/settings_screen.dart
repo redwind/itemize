@@ -8,8 +8,10 @@ import 'package:itemize/core/utils/amount.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:itemize/core/utils/auth_service.dart';
 import 'package:itemize/core/utils/backup_service.dart';
+import 'package:itemize/core/legal.dart';
 import 'package:itemize/core/utils/reminders.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 // import 'package:itemize/core/utils/pdf_service.dart';
 import 'package:itemize/providers/asset_provider.dart';
 import 'package:itemize/core/utils/free_tier.dart';
@@ -308,6 +310,24 @@ class SettingsScreen extends ConsumerWidget {
 
           const Divider(),
           _buildSectionHeader(l10n.about),
+          ListTile(
+            leading: const Icon(
+              Icons.privacy_tip_outlined,
+              color: AppTheme.textSecondary,
+            ),
+            title: Text(l10n.privacyPolicy),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _openLegalUrl(context, kPrivacyPolicyUrl),
+          ),
+          ListTile(
+            leading: const Icon(
+              Icons.description_outlined,
+              color: AppTheme.textSecondary,
+            ),
+            title: Text(l10n.termsOfUse),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _openLegalUrl(context, kTermsOfUseUrl),
+          ),
           ListTile(title: Text(l10n.version), trailing: const Text('1.0.0')),
 
           if (proState.isPro && kDebugMode) ...[
@@ -599,6 +619,25 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
     );
+  }
+
+  /// Opens a legal page, or says plainly why it can't.
+  ///
+  /// [kPrivacyPolicyUrl]/[kTermsOfUseUrl] start out pointing at `.invalid`
+  /// (see `lib/core/legal.dart`) until `docs/` is published and the real
+  /// addresses are filled in. Launching an `.invalid` URL would either fail
+  /// silently or hand the owner a browser tab going nowhere -- worse than
+  /// telling them outright that the page isn't live yet.
+  Future<void> _openLegalUrl(BuildContext context, String url) async {
+    if (!isLegalUrlConfigured(url)) {
+      _snack(context, 'This page has not been published yet.');
+      return;
+    }
+    final uri = Uri.parse(url);
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && context.mounted) {
+      _snack(context, 'Could not open this page.');
+    }
   }
 
   void _snack(BuildContext context, String message) {

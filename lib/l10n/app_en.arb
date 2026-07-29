@@ -902,5 +902,16 @@
       }
     }
   },
-  "dashboardNothingYet": "Nothing recorded yet. Photograph a room and it will fill in."
+  "dashboardNothingYet": "Nothing recorded yet. Photograph a room and it will fill in.",
+  "roomBathroom": "Bathroom",
+  "roomDiningRoom": "Dining Room",
+  "roomBasement": "Basement",
+  "roomKidsRoom": "Kids' Room",
+  "roomHallway": "Hallway",
+  "roomGarden": "Garden & Balcony",
+  "privacyPolicy": "Privacy Policy",
+  "termsOfUse": "Terms of Use",
+  "paywallSeeSample": "See a sample report",
+  "sampleReportTitle": "Sample report",
+  "sampleReportNote": "This is the document Pro produces. Sharing is switched off while you are looking at the sample."
 }

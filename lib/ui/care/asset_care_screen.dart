@@ -40,7 +40,7 @@ class AssetCareScreen extends ConsumerWidget {
           ),
           schedules.when(
             loading: () => const _Loading(),
-            error: (e, _) => Text('Error: $e'),
+            error: (e, _) => Text(l10n.genericError('$e')),
             data:
                 (list) =>
                     list.isEmpty
@@ -74,7 +74,7 @@ class AssetCareScreen extends ConsumerWidget {
           _sectionHeader(l10n.history, onAdd: () => _logService(context, ref)),
           records.when(
             loading: () => const _Loading(),
-            error: (e, _) => Text('Error: $e'),
+            error: (e, _) => Text(l10n.genericError('$e')),
             data:
                 (list) =>
                     list.isEmpty

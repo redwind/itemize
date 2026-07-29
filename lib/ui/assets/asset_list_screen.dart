@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:itemize/core/theme/app_theme.dart';
 import 'package:itemize/core/utils/asset_search.dart';
+import 'package:itemize/core/utils/warranty_status.dart';
 import 'package:itemize/data/models/asset.dart';
 import 'package:itemize/providers/asset_provider.dart';
 import 'package:itemize/providers/settings_provider.dart';
@@ -104,10 +105,22 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
       width: 60,
       height: 60,
     );
-    final bool isExpired =
-        asset.warrantyExpiry != null &&
-        asset.warrantyExpiry!.isBefore(DateTime.now());
-    final warrantyColor = isExpired ? AppTheme.errorRed : AppTheme.successGreen;
+    // Same standings, labels and colours as the Care tab -- see
+    // WarrantyStatus.of. Two screens disagreeing about whether something is
+    // covered is worse than either being wrong on its own.
+    final standing = WarrantyStatus.of(asset);
+    final warrantyColor = switch (standing) {
+      WarrantyStanding.covered => AppTheme.successGreen,
+      WarrantyStanding.expiringSoon => Colors.orange.shade800,
+      WarrantyStanding.expired => AppTheme.errorRed,
+      WarrantyStanding.unknown => Colors.grey,
+    };
+    final warrantyLabel = switch (standing) {
+      WarrantyStanding.covered => l10n.standingCovered,
+      WarrantyStanding.expiringSoon => l10n.standingEndingSoon,
+      WarrantyStanding.expired => l10n.standingExpired,
+      WarrantyStanding.unknown => l10n.standingUnknown,
+    };
 
     return GestureDetector(
       onTap: () {
@@ -182,7 +195,7 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  isExpired ? l10n.standingExpired : l10n.standingCovered,
+                  warrantyLabel,
                   style: TextStyle(
                     color: warrantyColor,
                     fontSize: 10,

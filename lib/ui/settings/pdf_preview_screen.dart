@@ -14,7 +14,20 @@ import 'package:itemize/l10n/app_localizations.dart';
 class PdfPreviewScreen extends ConsumerWidget {
   final List<Asset> assets;
 
-  const PdfPreviewScreen({super.key, required this.assets});
+  /// True for the paywall's "see a sample" preview rather than a real export.
+  ///
+  /// Forces the Pro layout regardless of [proProvider], so a free visitor sees
+  /// the document Pro produces rather than the one they already have. Sharing
+  /// and printing are switched off for the same reason a shop demo doesn't let
+  /// you walk out with the till receipt: nothing here should be a way to get
+  /// the Pro document without paying for it.
+  final bool sample;
+
+  const PdfPreviewScreen({
+    super.key,
+    required this.assets,
+    this.sample = false,
+  });
 
   /// Groups the whole history by item, in one read.
   ///
@@ -32,15 +45,16 @@ class PdfPreviewScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isPro = ref.watch(proProvider).isPro;
+    final isPro = sample || ref.watch(proProvider).isPro;
     // Resolved before the builder rather than inside it: PdfPreview calls that
     // builder asynchronously, by which time reading a BuildContext is unsafe.
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: const _PreviewBar(),
+      appBar: _PreviewBar(sample: sample),
       body: Column(
         children: [
+          if (sample) const _SampleBanner(),
           if (!isPro) _UpgradeBanner(itemCount: assets.length),
           Expanded(
             child: PdfPreview(
@@ -52,8 +66,8 @@ class PdfPreviewScreen extends ConsumerWidget {
                     isPro: isPro,
                     serviceHistory: isPro ? await _history(ref) : const {},
                   ),
-              allowSharing: true,
-              allowPrinting: true,
+              allowSharing: !sample,
+              allowPrinting: !sample,
               initialPageFormat: PdfPageFormat.a4,
               pdfFileName: 'itemize_report.pdf',
             ),
@@ -65,14 +79,52 @@ class PdfPreviewScreen extends ConsumerWidget {
 }
 
 class _PreviewBar extends StatelessWidget implements PreferredSizeWidget {
-  const _PreviewBar();
+  final bool sample;
+
+  const _PreviewBar({required this.sample});
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
   @override
-  Widget build(BuildContext context) =>
-      AppBar(title: Text(AppLocalizations.of(context)!.reportPreview));
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return AppBar(
+      title: Text(sample ? l10n.sampleReportTitle : l10n.reportPreview),
+    );
+  }
+}
+
+/// Says, on the document itself, that it is not the one the viewer just paid
+/// for -- because sharing being greyed out only reads as a bug otherwise.
+class _SampleBanner extends StatelessWidget {
+  const _SampleBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      decoration: BoxDecoration(
+        color: Colors.purple.shade50,
+        border: Border(bottom: BorderSide(color: Colors.purple.shade100)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline, size: 18, color: Colors.purple),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              l10n.sampleReportNote,
+              style: const TextStyle(fontSize: 13, color: Colors.purple),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Says what the paid document adds, on the screen where it matters.

@@ -2487,6 +2487,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nothing recorded yet. Photograph a room and it will fill in.'**
   String get dashboardNothingYet;
+
+  /// No description provided for @roomBathroom.
+  ///
+  /// In en, this message translates to:
+  /// **'Bathroom'**
+  String get roomBathroom;
+
+  /// No description provided for @roomDiningRoom.
+  ///
+  /// In en, this message translates to:
+  /// **'Dining Room'**
+  String get roomDiningRoom;
+
+  /// No description provided for @roomBasement.
+  ///
+  /// In en, this message translates to:
+  /// **'Basement'**
+  String get roomBasement;
+
+  /// No description provided for @roomKidsRoom.
+  ///
+  /// In en, this message translates to:
+  /// **'Kids\' Room'**
+  String get roomKidsRoom;
+
+  /// No description provided for @roomHallway.
+  ///
+  /// In en, this message translates to:
+  /// **'Hallway'**
+  String get roomHallway;
+
+  /// No description provided for @roomGarden.
+  ///
+  /// In en, this message translates to:
+  /// **'Garden & Balcony'**
+  String get roomGarden;
+
+  /// No description provided for @privacyPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy Policy'**
+  String get privacyPolicy;
+
+  /// No description provided for @termsOfUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms of Use'**
+  String get termsOfUse;
+
+  /// No description provided for @paywallSeeSample.
+  ///
+  /// In en, this message translates to:
+  /// **'See a sample report'**
+  String get paywallSeeSample;
+
+  /// No description provided for @sampleReportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sample report'**
+  String get sampleReportTitle;
+
+  /// No description provided for @sampleReportNote.
+  ///
+  /// In en, this message translates to:
+  /// **'This is the document Pro produces. Sharing is switched off while you are looking at the sample.'**
+  String get sampleReportNote;
 }
 
 class _AppLocalizationsDelegate

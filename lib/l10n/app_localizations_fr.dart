@@ -1466,4 +1466,38 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get dashboardNothingYet =>
       'Rien d\'enregistré pour l\'instant. Photographiez une pièce et tout se remplira.';
+
+  @override
+  String get roomBathroom => 'Salle de bain';
+
+  @override
+  String get roomDiningRoom => 'Salle à manger';
+
+  @override
+  String get roomBasement => 'Cave';
+
+  @override
+  String get roomKidsRoom => 'Chambre d\'enfant';
+
+  @override
+  String get roomHallway => 'Entrée';
+
+  @override
+  String get roomGarden => 'Jardin et balcon';
+
+  @override
+  String get privacyPolicy => 'Politique de confidentialité';
+
+  @override
+  String get termsOfUse => 'Conditions d\'utilisation';
+
+  @override
+  String get paywallSeeSample => 'Voir un exemple de rapport';
+
+  @override
+  String get sampleReportTitle => 'Exemple de rapport';
+
+  @override
+  String get sampleReportNote =>
+      'Voici le document que Pro génère. Le partage est désactivé pendant la consultation de l\'exemple.';
 }

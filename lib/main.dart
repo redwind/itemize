@@ -83,9 +83,9 @@ class ItemizeApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      // English only, deliberately -- see kSupportedLanguages. The delegates
-      // and the generated l10n classes stay, so widening this later is a
-      // translation job rather than a rebuild.
+      // kSupportedLanguages is the one list that has to grow to add a fourth
+      // language -- this just mirrors it, so a translation lands here for
+      // free.
       supportedLocales: kSupportedLanguages.map(Locale.new).toList(),
       home: const BiometricGuard(child: OnboardingGate(child: MainScreen())),
     );

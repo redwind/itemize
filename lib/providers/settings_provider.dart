@@ -40,10 +40,9 @@ class AppSettings {
 
   /// The interface language.
   ///
-  /// Pinned to English for now — see [kSupportedLanguages]. The field and its
-  /// setter are kept rather than ripped out because the l10n plumbing is
-  /// staying: adding a language back is a matter of translating and widening
-  /// that list, not of rebuilding this.
+  /// One of [kSupportedLanguages], sanitised on read: a code stored by an
+  /// earlier build that no longer ships lands on English rather than on a
+  /// half-translated screen.
   final String languageCode;
 
   AppSettings({

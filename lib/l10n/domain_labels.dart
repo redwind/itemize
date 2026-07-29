@@ -18,9 +18,15 @@ extension DomainLabels on AppLocalizations {
   String roomLabel(String room) => switch (room) {
     'Living Room' => roomLivingRoom,
     'Kitchen' => roomKitchen,
+    'Dining Room' => roomDiningRoom,
+    'Bathroom' => roomBathroom,
     'Bedroom' => roomBedroom,
+    "Kids' Room" => roomKidsRoom,
     'Office' => roomOffice,
+    'Hallway' => roomHallway,
+    'Basement' => roomBasement,
     'Garage' => roomGarage,
+    'Garden & Balcony' => roomGarden,
     'Other' => roomOther,
     _ => room,
   };
