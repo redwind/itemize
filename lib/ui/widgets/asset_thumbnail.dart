@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import 'package:itemize/core/utils/image_storage.dart';
+import 'package:inventa/core/utils/image_storage.dart';
 
 /// An item photo decoded no larger than the box it is shown in.
 ///

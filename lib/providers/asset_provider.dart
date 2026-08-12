@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:itemize/core/utils/depreciation.dart';
-import 'package:itemize/core/utils/maintenance_planner.dart';
-import 'package:itemize/core/utils/reminders.dart';
-import 'package:itemize/data/models/asset.dart';
-import 'package:itemize/data/models/maintenance_schedule.dart';
-import 'package:itemize/data/models/service_record.dart';
-import 'package:itemize/data/repositories/asset_repository.dart';
-import 'package:itemize/providers/settings_provider.dart';
+import 'package:inventa/core/utils/depreciation.dart';
+import 'package:inventa/core/utils/maintenance_planner.dart';
+import 'package:inventa/core/utils/reminders.dart';
+import 'package:inventa/data/models/asset.dart';
+import 'package:inventa/data/models/maintenance_schedule.dart';
+import 'package:inventa/data/models/service_record.dart';
+import 'package:inventa/data/repositories/asset_repository.dart';
+import 'package:inventa/providers/settings_provider.dart';
 
 final assetRepositoryProvider = Provider<AssetRepository>((ref) {
   return AssetRepository();

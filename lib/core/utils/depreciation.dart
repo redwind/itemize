@@ -1,4 +1,4 @@
-import 'package:itemize/data/models/asset.dart';
+import 'package:inventa/data/models/asset.dart';
 
 /// Estimates what belongings are worth now rather than what they cost.
 ///

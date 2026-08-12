@@ -1,4 +1,4 @@
-import 'package:itemize/data/models/asset.dart';
+import 'package:inventa/data/models/asset.dart';
 
 /// Where an item stands on its warranty.
 enum WarrantyStanding {

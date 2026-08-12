@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:itemize/core/theme/app_theme.dart';
-import 'package:itemize/providers/settings_provider.dart';
-import 'package:itemize/ui/add_item/quick_capture_screen.dart';
-import 'package:itemize/l10n/app_localizations.dart';
+import 'package:inventa/core/theme/app_theme.dart';
+import 'package:inventa/providers/settings_provider.dart';
+import 'package:inventa/ui/add_item/quick_capture_screen.dart';
+import 'package:inventa/l10n/app_localizations.dart';
 
 /// Walks a new owner into photographing one room.
 ///

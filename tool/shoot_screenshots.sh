@@ -11,7 +11,7 @@ set -uo pipefail
 SIM="${SIM:-$(xcrun simctl list devices booted -j | python3 -c "import json,sys;d=json.load(sys.stdin)['devices'];print(next(x['udid'] for v in d.values() for x in v))")}"
 PROJ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT="$PROJ/screenshots"
-LOG="${LOG:-$(mktemp -t itemize-shots)}"
+LOG="${LOG:-$(mktemp -t inventa-shots)}"
 
 cd "$PROJ" || exit 1
 rm -rf "$OUT"; mkdir -p "$OUT"

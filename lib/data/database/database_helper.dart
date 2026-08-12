@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import 'package:itemize/data/models/asset.dart';
-import 'package:itemize/data/models/maintenance_schedule.dart';
-import 'package:itemize/data/models/service_record.dart';
+import 'package:inventa/data/models/asset.dart';
+import 'package:inventa/data/models/maintenance_schedule.dart';
+import 'package:inventa/data/models/service_record.dart';
 
 class DatabaseHelper {
   /// Bumped whenever the schema changes; drives [migrate].

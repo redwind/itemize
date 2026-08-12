@@ -4,10 +4,10 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
-import 'package:itemize/core/utils/pdf_service.dart';
-import 'package:itemize/l10n/app_localizations_en.dart';
-import 'package:itemize/l10n/app_localizations_fr.dart';
-import 'package:itemize/data/models/asset.dart';
+import 'package:inventa/core/utils/pdf_service.dart';
+import 'package:inventa/l10n/app_localizations_en.dart';
+import 'package:inventa/l10n/app_localizations_fr.dart';
+import 'package:inventa/data/models/asset.dart';
 
 Asset asset({
   required String id,

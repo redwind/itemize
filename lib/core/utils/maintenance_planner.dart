@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
-import 'package:itemize/data/models/asset.dart';
-import 'package:itemize/data/models/maintenance_schedule.dart';
+import 'package:inventa/data/models/asset.dart';
+import 'package:inventa/data/models/maintenance_schedule.dart';
 
 /// A job, the item it belongs to, and when it falls due.
 ///

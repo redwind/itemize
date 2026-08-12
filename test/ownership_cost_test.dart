@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:itemize/core/utils/ownership_cost.dart';
-import 'package:itemize/data/models/asset.dart';
-import 'package:itemize/data/models/service_record.dart';
+import 'package:inventa/core/utils/ownership_cost.dart';
+import 'package:inventa/data/models/asset.dart';
+import 'package:inventa/data/models/service_record.dart';
 
 Asset asset({double price = 1000, DateTime? purchaseDate}) => Asset(
   id: 'a',

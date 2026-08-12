@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:itemize/providers/settings_provider.dart';
+import 'package:inventa/providers/settings_provider.dart';
 
 void main() {
   group('resolving a stored language', () {

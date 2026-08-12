@@ -2,10 +2,10 @@ import 'dart:ui' show Locale;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:itemize/core/utils/reminders.dart';
-import 'package:itemize/data/models/asset.dart';
-import 'package:itemize/data/models/maintenance_schedule.dart';
-import 'package:itemize/l10n/app_localizations.dart';
+import 'package:inventa/core/utils/reminders.dart';
+import 'package:inventa/data/models/asset.dart';
+import 'package:inventa/data/models/maintenance_schedule.dart';
+import 'package:inventa/l10n/app_localizations.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 

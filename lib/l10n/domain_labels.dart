@@ -1,6 +1,6 @@
-import 'package:itemize/data/models/asset.dart';
-import 'package:itemize/data/models/service_record.dart';
-import 'package:itemize/l10n/app_localizations.dart';
+import 'package:inventa/data/models/asset.dart';
+import 'package:inventa/data/models/service_record.dart';
+import 'package:inventa/l10n/app_localizations.dart';
 
 /// Translates the values the app stores, without translating what it stores.
 ///

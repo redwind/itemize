@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:itemize/core/utils/warranty_status.dart';
-import 'package:itemize/data/models/asset.dart';
+import 'package:inventa/core/utils/warranty_status.dart';
+import 'package:inventa/data/models/asset.dart';
 
 Asset asset({String id = 'a', String name = 'Fridge', DateTime? expiry}) =>
     Asset(

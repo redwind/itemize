@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:itemize/core/utils/amount.dart';
+import 'package:inventa/core/utils/amount.dart';
 
 /// What the price field does with what people actually type.
 ///

@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.itemize" "\0"
-            VALUE "FileDescription", "itemize" "\0"
+            VALUE "FileDescription", "Inventa" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "itemize" "\0"
+            VALUE "InternalName", "Inventa" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.itemize. All rights reserved." "\0"
-            VALUE "OriginalFilename", "itemize.exe" "\0"
-            VALUE "ProductName", "itemize" "\0"
+            VALUE "OriginalFilename", "inventa.exe" "\0"
+            VALUE "ProductName", "Inventa" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

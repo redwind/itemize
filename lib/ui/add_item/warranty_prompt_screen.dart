@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:itemize/core/theme/app_theme.dart';
-import 'package:itemize/data/models/asset.dart';
-import 'package:itemize/ui/widgets/asset_thumbnail.dart';
-import 'package:itemize/l10n/app_localizations.dart';
+import 'package:inventa/core/theme/app_theme.dart';
+import 'package:inventa/data/models/asset.dart';
+import 'package:inventa/ui/widgets/asset_thumbnail.dart';
+import 'package:inventa/l10n/app_localizations.dart';
 
 /// Asks how long each of [assets] is covered for, returning the ones the owner
 /// gave a date for. Returns an empty list if they skipped.

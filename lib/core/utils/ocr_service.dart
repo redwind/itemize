@@ -2,8 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
 import 'package:intl/intl.dart';
-import 'package:itemize/core/utils/amount.dart';
-import 'package:itemize/core/utils/nameplate_parser.dart';
+import 'package:inventa/core/utils/amount.dart';
+import 'package:inventa/core/utils/nameplate_parser.dart';
 
 class OCRService {
   final _textRecognizer = TextRecognizer();

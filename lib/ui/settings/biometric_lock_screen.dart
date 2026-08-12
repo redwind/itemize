@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:itemize/core/theme/app_theme.dart';
-import 'package:itemize/core/utils/auth_service.dart';
-import 'package:itemize/l10n/app_localizations.dart';
+import 'package:inventa/core/theme/app_theme.dart';
+import 'package:inventa/core/utils/auth_service.dart';
+import 'package:inventa/l10n/app_localizations.dart';
 
 class BiometricLockScreen extends StatefulWidget {
   final VoidCallback onUnlock;
@@ -31,7 +31,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
 
     try {
       final authenticated = await AuthService().authenticate(
-        reason: 'Authenticate to access Itemize',
+        reason: 'Authenticate to access Inventa',
       );
 
       if (authenticated && mounted) {

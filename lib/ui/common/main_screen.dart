@@ -1,12 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:itemize/ui/dashboard/dashboard_screen.dart';
-import 'package:itemize/ui/assets/asset_list_screen.dart';
-import 'package:itemize/ui/care/care_screen.dart';
-import 'package:itemize/ui/add_item/add_item_screen.dart';
-import 'package:itemize/ui/add_item/quick_capture_screen.dart';
-import 'package:itemize/ui/settings/settings_screen.dart';
-import 'package:itemize/l10n/app_localizations.dart';
+import 'package:inventa/ui/dashboard/dashboard_screen.dart';
+import 'package:inventa/ui/assets/asset_list_screen.dart';
+import 'package:inventa/ui/care/care_screen.dart';
+import 'package:inventa/ui/add_item/add_item_screen.dart';
+import 'package:inventa/ui/add_item/quick_capture_screen.dart';
+import 'package:inventa/ui/settings/settings_screen.dart';
+import 'package:inventa/l10n/app_localizations.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});

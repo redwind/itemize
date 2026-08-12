@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
-import 'package:itemize/core/utils/depreciation.dart';
-import 'package:itemize/data/models/asset.dart';
-import 'package:itemize/data/models/service_record.dart';
+import 'package:inventa/core/utils/depreciation.dart';
+import 'package:inventa/data/models/asset.dart';
+import 'package:inventa/data/models/service_record.dart';
 
 /// What the running total says about mending something again.
 enum OwnershipVerdict {

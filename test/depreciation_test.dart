@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:itemize/core/utils/depreciation.dart';
-import 'package:itemize/data/models/asset.dart';
+import 'package:inventa/core/utils/depreciation.dart';
+import 'package:inventa/data/models/asset.dart';
 
 Asset asset({
   required String category,

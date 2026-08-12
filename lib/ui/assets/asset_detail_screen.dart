@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:itemize/core/theme/app_theme.dart';
-import 'package:itemize/core/utils/depreciation.dart';
-import 'package:itemize/data/models/asset.dart';
-import 'package:itemize/providers/asset_provider.dart';
-import 'package:itemize/providers/settings_provider.dart';
-import 'package:itemize/ui/add_item/add_item_screen.dart';
-import 'package:itemize/ui/care/asset_care_screen.dart';
-import 'package:itemize/ui/widgets/asset_thumbnail.dart';
-import 'package:itemize/l10n/app_localizations.dart';
-import 'package:itemize/l10n/domain_labels.dart';
+import 'package:inventa/core/theme/app_theme.dart';
+import 'package:inventa/core/utils/depreciation.dart';
+import 'package:inventa/data/models/asset.dart';
+import 'package:inventa/providers/asset_provider.dart';
+import 'package:inventa/providers/settings_provider.dart';
+import 'package:inventa/ui/add_item/add_item_screen.dart';
+import 'package:inventa/ui/care/asset_care_screen.dart';
+import 'package:inventa/ui/widgets/asset_thumbnail.dart';
+import 'package:inventa/l10n/app_localizations.dart';
+import 'package:inventa/l10n/domain_labels.dart';
 
 class AssetDetailScreen extends ConsumerStatefulWidget {
   final Asset asset;

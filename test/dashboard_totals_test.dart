@@ -1,11 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:itemize/core/utils/asset_search.dart';
-import 'package:itemize/data/database/database_helper.dart';
-import 'package:itemize/data/models/asset.dart';
-import 'package:itemize/data/repositories/asset_repository.dart';
-import 'package:itemize/providers/asset_provider.dart';
-import 'package:itemize/providers/settings_provider.dart';
+import 'package:inventa/core/utils/asset_search.dart';
+import 'package:inventa/data/database/database_helper.dart';
+import 'package:inventa/data/models/asset.dart';
+import 'package:inventa/data/repositories/asset_repository.dart';
+import 'package:inventa/providers/asset_provider.dart';
+import 'package:inventa/providers/settings_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 

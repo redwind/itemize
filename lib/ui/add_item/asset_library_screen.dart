@@ -1,9 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:itemize/core/catalog/asset_catalog.dart';
-import 'package:itemize/core/theme/app_theme.dart';
-import 'package:itemize/l10n/app_localizations.dart';
-import 'package:itemize/l10n/domain_labels.dart';
+import 'package:inventa/core/catalog/asset_catalog.dart';
+import 'package:inventa/core/theme/app_theme.dart';
+import 'package:inventa/l10n/app_localizations.dart';
+import 'package:inventa/l10n/domain_labels.dart';
 
 /// Grid of stock item pictures. Pops with the chosen [CatalogItem], or null.
 class AssetLibraryScreen extends StatefulWidget {

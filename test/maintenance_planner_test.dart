@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:itemize/core/utils/maintenance_planner.dart';
-import 'package:itemize/data/models/asset.dart';
-import 'package:itemize/data/models/maintenance_schedule.dart';
+import 'package:inventa/core/utils/maintenance_planner.dart';
+import 'package:inventa/data/models/asset.dart';
+import 'package:inventa/data/models/maintenance_schedule.dart';
 
 Asset asset({
   String id = 'a',

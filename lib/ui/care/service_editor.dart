@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:itemize/core/utils/amount.dart';
-import 'package:itemize/data/models/asset.dart';
-import 'package:itemize/data/models/maintenance_schedule.dart';
-import 'package:itemize/data/models/service_record.dart';
+import 'package:inventa/core/utils/amount.dart';
+import 'package:inventa/data/models/asset.dart';
+import 'package:inventa/data/models/maintenance_schedule.dart';
+import 'package:inventa/data/models/service_record.dart';
 import 'package:uuid/uuid.dart';
-import 'package:itemize/l10n/app_localizations.dart';
-import 'package:itemize/l10n/domain_labels.dart';
+import 'package:inventa/l10n/app_localizations.dart';
+import 'package:inventa/l10n/domain_labels.dart';
 
 /// Records work done on an item, returning null if nothing was saved.
 Future<ServiceRecord?> showServiceEditor(

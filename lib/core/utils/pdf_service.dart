@@ -4,12 +4,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:image/image.dart' as img;
 import 'package:intl/intl.dart';
-import 'package:itemize/core/utils/depreciation.dart';
-import 'package:itemize/core/utils/image_storage.dart';
-import 'package:itemize/data/models/asset.dart';
-import 'package:itemize/l10n/app_localizations.dart';
-import 'package:itemize/l10n/domain_labels.dart';
-import 'package:itemize/data/models/service_record.dart';
+import 'package:inventa/core/utils/depreciation.dart';
+import 'package:inventa/core/utils/image_storage.dart';
+import 'package:inventa/data/models/asset.dart';
+import 'package:inventa/l10n/app_localizations.dart';
+import 'package:inventa/l10n/domain_labels.dart';
+import 'package:inventa/data/models/service_record.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
@@ -598,7 +598,7 @@ class PDFService {
       margin: const pw.EdgeInsets.only(top: 8),
       child: pw.Text(
         isPro
-            ? 'Itemize · ${DateFormat.yMd(l10n.localeName).format(generatedAt)} · '
+            ? 'Inventa · ${DateFormat.yMd(l10n.localeName).format(generatedAt)} · '
                 '${l10n.reportPageOf(context.pageNumber, context.pagesCount)}'
             : '${l10n.reportFooterFree} · '
                 '${l10n.reportPageOf(context.pageNumber, context.pagesCount)}',

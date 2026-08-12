@@ -4,10 +4,10 @@ import 'dart:io';
 import 'package:archive/archive_io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
-import 'package:itemize/core/utils/image_storage.dart';
-import 'package:itemize/data/models/asset.dart';
-import 'package:itemize/data/models/maintenance_schedule.dart';
-import 'package:itemize/data/models/service_record.dart';
+import 'package:inventa/core/utils/image_storage.dart';
+import 'package:inventa/data/models/asset.dart';
+import 'package:inventa/data/models/maintenance_schedule.dart';
+import 'package:inventa/data/models/service_record.dart';
 
 /// Thrown when an archive is not one of ours, or is one we cannot read.
 class BackupFormatException implements Exception {
@@ -56,7 +56,15 @@ class BackupImportResult {
 /// whatever protection the place the owner puts it already has.
 class BackupService {
   /// The extension the exported file carries.
-  static const String fileExtension = 'itemize';
+  static const String fileExtension = 'inventa';
+
+  /// The extension exports carried when the app was called Itemize.
+  ///
+  /// Only of interest to a human looking at their own files: the picker offers
+  /// every type ([FileType.any]) precisely so an unknown custom extension is
+  /// never greyed out, and [import] identifies an archive by [_formatTag]
+  /// rather than by its name.
+  static const String legacyFileExtension = 'itemize';
 
   /// Bumped if the layout inside the archive ever changes incompatibly.
   ///
@@ -72,7 +80,15 @@ class BackupService {
   static const int formatVersion = 2;
 
   static const String _manifestName = 'inventory.json';
-  static const String _formatTag = 'itemize-backup';
+  static const String _formatTag = 'inventa-backup';
+
+  /// The tag written by every build shipped under the old name.
+  ///
+  /// Accepted on import forever. Someone who exported their inventory before
+  /// the rename is holding the only copy of it, and refusing to read that file
+  /// because a word in it changed would lose them everything the backup exists
+  /// to protect. Nothing inside the archive differs — only this string.
+  static const String _legacyFormatTag = 'itemize-backup';
 
   /// Writes every item and photo into a single archive, returning the file.
   ///
@@ -144,9 +160,9 @@ class BackupService {
       'serviceRecords': serviceRecords.map((r) => r.toMap()).toList(),
     });
 
-    final directory = await Directory.systemTemp.createTemp('itemize_backup');
+    final directory = await Directory.systemTemp.createTemp('inventa_backup');
     final stamp = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final target = '${directory.path}/itemize-backup-$stamp.$fileExtension';
+    final target = '${directory.path}/inventa-backup-$stamp.$fileExtension';
 
     await compute(_writeArchive, {
       'target': target,
@@ -185,7 +201,7 @@ class BackupService {
     final manifestText = extracted['manifest'] as String?;
     if (manifestText == null) {
       throw const BackupFormatException(
-        'This file is not an Itemize backup: it has no inventory in it.',
+        'This file is not an Inventa backup: it has no inventory in it.',
       );
     }
 
@@ -198,14 +214,15 @@ class BackupService {
       );
     }
 
-    if (manifest['format'] != _formatTag) {
-      throw const BackupFormatException('This file is not an Itemize backup.');
+    final tag = manifest['format'];
+    if (tag != _formatTag && tag != _legacyFormatTag) {
+      throw const BackupFormatException('This file is not an Inventa backup.');
     }
 
     final version = manifest['version'];
     if (version is! int || version > formatVersion) {
       throw const BackupFormatException(
-        'This backup was made by a newer version of Itemize. Update the app, '
+        'This backup was made by a newer version of Inventa. Update the app, '
         'then try again.',
       );
     }

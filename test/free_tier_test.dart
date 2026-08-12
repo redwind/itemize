@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:itemize/core/utils/free_tier.dart';
+import 'package:inventa/core/utils/free_tier.dart';
 
 void main() {
   group('remainingFreeSlots', () {

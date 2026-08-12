@@ -4,11 +4,11 @@ import 'dart:typed_data';
 
 import 'package:archive/archive_io.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:itemize/core/utils/backup_service.dart';
-import 'package:itemize/core/utils/image_storage.dart';
-import 'package:itemize/data/models/asset.dart';
-import 'package:itemize/data/models/maintenance_schedule.dart';
-import 'package:itemize/data/models/service_record.dart';
+import 'package:inventa/core/utils/backup_service.dart';
+import 'package:inventa/core/utils/image_storage.dart';
+import 'package:inventa/data/models/asset.dart';
+import 'package:inventa/data/models/maintenance_schedule.dart';
+import 'package:inventa/data/models/service_record.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
 /// Stands in for the platform channel, which unit tests do not have.
@@ -63,7 +63,7 @@ void main() {
   late Map<String, ServiceRecord> recordStore;
 
   setUp(() async {
-    documents = await Directory.systemTemp.createTemp('itemize_docs');
+    documents = await Directory.systemTemp.createTemp('inventa_docs');
     PathProviderPlatform.instance = _FakePathProvider(documents.path);
     await ImageStorage.init();
     service = BackupService();
@@ -81,7 +81,7 @@ void main() {
     final archive = Archive();
     final bytes = utf8.encode(jsonEncode(manifest));
     archive.addFile(ArchiveFile('inventory.json', bytes.length, bytes));
-    final path = '${documents.path}/$name.itemize';
+    final path = '${documents.path}/$name.inventa';
     File(path).writeAsBytesSync(ZipEncoder().encode(archive));
     return path;
   }
@@ -125,6 +125,22 @@ void main() {
       expect(restored.purchaseDate, DateTime(2024, 3, 1));
       expect(restored.warrantyExpiry, DateTime(2027, 3, 1));
       expect(restored.isFavorite, isTrue);
+    });
+
+    test('an archive exported under the old name still restores', () async {
+      // The app was called Itemize until the rename. Someone who exported then
+      // and has not opened the app since is holding a file whose only
+      // difference is this tag, and it is the only copy of their inventory.
+      final path = archiveWithManifest('legacy', {
+        'format': 'itemize-backup',
+        'version': BackupService.formatVersion,
+        'assets': [asset(id: 'a', name: 'Máy giặt Toshiba').toMap()],
+      });
+
+      final result = await restore(path);
+
+      expect(result.added, 1);
+      expect(store['a']!.name, 'Máy giặt Toshiba');
     });
 
     test('photos come back onto disk where the items point', () async {
@@ -360,7 +376,7 @@ void main() {
       final other = await service.export([asset(id: 'a')]);
       final bytes = other.readAsBytesSync();
       // Corrupt the manifest name by truncating the archive.
-      final broken = File('${documents.path}/broken.itemize')
+      final broken = File('${documents.path}/broken.inventa')
         ..writeAsBytesSync(bytes.sublist(0, bytes.length ~/ 3));
 
       expect(() => restore(broken.path), throwsA(isA<Exception>()));
@@ -371,14 +387,14 @@ void main() {
       final archive = Archive();
       final bytes = utf8.encode(jsonEncode(manifest));
       archive.addFile(ArchiveFile('inventory.json', bytes.length, bytes));
-      final path = '${documents.path}/$name.itemize';
+      final path = '${documents.path}/$name.inventa';
       File(path).writeAsBytesSync(ZipEncoder().encode(archive));
       return path;
     }
 
     test('a backup from a future version is refused, not half-read', () async {
       final path = archiveWithManifestLocal('future', {
-        'format': 'itemize-backup',
+        'format': 'inventa-backup',
         'version': BackupService.formatVersion + 1,
         'assets': [asset(id: 'a').toMap()],
       });
@@ -409,7 +425,7 @@ void main() {
           isA<BackupFormatException>().having(
             (e) => e.message,
             'message',
-            contains('not an Itemize backup'),
+            contains('not an Inventa backup'),
           ),
         ),
       );
@@ -417,7 +433,7 @@ void main() {
 
     test('one unreadable row does not cost the owner the others', () async {
       final path = archiveWithManifestLocal('partial', {
-        'format': 'itemize-backup',
+        'format': 'inventa-backup',
         'version': 1,
         'assets': [
           asset(id: 'good-1').toMap(),
@@ -504,7 +520,7 @@ void main() {
     test('an older v1 archive still restores its items', () async {
       // No schedules or history keys at all, as v1 wrote it.
       final path = archiveWithManifest('v1', {
-        'format': 'itemize-backup',
+        'format': 'inventa-backup',
         'version': 1,
         'assets': [asset(id: 'a').toMap()],
       });
@@ -518,7 +534,7 @@ void main() {
 
     test('one unreadable schedule does not cost the others', () async {
       final path = archiveWithManifest('partial-children', {
-        'format': 'itemize-backup',
+        'format': 'inventa-backup',
         'version': 2,
         'assets': [asset(id: 'a').toMap()],
         'schedules': [

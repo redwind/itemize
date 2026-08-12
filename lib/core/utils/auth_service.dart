@@ -18,7 +18,7 @@ class AuthService {
   }
 
   Future<bool> authenticate({
-    String reason = 'Please authenticate to access Itemize',
+    String reason = 'Please authenticate to access Inventa',
   }) async {
     try {
       final bool didAuthenticate = await auth.authenticate(

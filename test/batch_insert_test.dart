@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:itemize/data/database/database_helper.dart';
-import 'package:itemize/data/models/asset.dart';
-import 'package:itemize/data/repositories/asset_repository.dart';
+import 'package:inventa/data/database/database_helper.dart';
+import 'package:inventa/data/models/asset.dart';
+import 'package:inventa/data/repositories/asset_repository.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 Asset asset({String id = 'a', String name = 'Boiler'}) => Asset(

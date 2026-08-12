@@ -2,20 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:itemize/core/utils/amount.dart';
-import 'package:itemize/core/utils/free_tier.dart';
-import 'package:itemize/core/utils/image_storage.dart';
-import 'package:itemize/core/utils/reminders.dart';
-import 'package:itemize/data/models/asset.dart';
-import 'package:itemize/providers/asset_provider.dart';
-import 'package:itemize/providers/pro_provider.dart';
-import 'package:itemize/providers/settings_provider.dart';
-import 'package:itemize/ui/add_item/warranty_prompt_screen.dart';
-import 'package:itemize/ui/settings/paywall_screen.dart';
-import 'package:itemize/ui/widgets/asset_thumbnail.dart';
+import 'package:inventa/core/utils/amount.dart';
+import 'package:inventa/core/utils/free_tier.dart';
+import 'package:inventa/core/utils/image_storage.dart';
+import 'package:inventa/core/utils/reminders.dart';
+import 'package:inventa/data/models/asset.dart';
+import 'package:inventa/providers/asset_provider.dart';
+import 'package:inventa/providers/pro_provider.dart';
+import 'package:inventa/providers/settings_provider.dart';
+import 'package:inventa/ui/add_item/warranty_prompt_screen.dart';
+import 'package:inventa/ui/settings/paywall_screen.dart';
+import 'package:inventa/ui/widgets/asset_thumbnail.dart';
 import 'package:uuid/uuid.dart';
-import 'package:itemize/l10n/app_localizations.dart';
-import 'package:itemize/l10n/domain_labels.dart';
+import 'package:inventa/l10n/app_localizations.dart';
+import 'package:inventa/l10n/domain_labels.dart';
 
 /// One photographed thing, waiting to be named.
 class _Draft {

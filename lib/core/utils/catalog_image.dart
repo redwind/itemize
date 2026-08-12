@@ -1,8 +1,8 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:itemize/core/catalog/asset_catalog.dart';
-import 'package:itemize/core/utils/image_storage.dart';
+import 'package:inventa/core/catalog/asset_catalog.dart';
+import 'package:inventa/core/utils/image_storage.dart';
 
 /// Paints a catalog item to a real image file.
 ///

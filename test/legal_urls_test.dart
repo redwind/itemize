@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:itemize/core/legal.dart';
+import 'package:inventa/core/legal.dart';
 
 /// Apple will not review a build without a reachable privacy policy URL, and
 /// this is the one check that catches "forgot to publish docs/ and fill in
@@ -36,7 +36,7 @@ void main() {
       // Proves the guard itself works, not just that today's placeholder
       // fails it -- a check that only ever sees one input is not proven.
       expect(
-        isLegalUrlConfigured('https://example.github.io/itemize/privacy.html'),
+        isLegalUrlConfigured('https://example.github.io/inventa/privacy.html'),
         isTrue,
       );
     });

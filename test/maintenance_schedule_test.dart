@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:itemize/data/models/maintenance_schedule.dart';
+import 'package:inventa/data/models/maintenance_schedule.dart';
 
 MaintenanceSchedule schedule({
   int intervalMonths = 6,

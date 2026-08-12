@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:itemize/data/database/database_helper.dart';
-import 'package:itemize/data/models/asset.dart';
-import 'package:itemize/data/models/maintenance_schedule.dart';
-import 'package:itemize/data/models/service_record.dart';
+import 'package:inventa/data/database/database_helper.dart';
+import 'package:inventa/data/models/asset.dart';
+import 'package:inventa/data/models/maintenance_schedule.dart';
+import 'package:inventa/data/models/service_record.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 /// The schema as it shipped in v1, reproduced verbatim.

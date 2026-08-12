@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:itemize/core/utils/asset_search.dart';
-import 'package:itemize/data/models/asset.dart';
+import 'package:inventa/core/utils/asset_search.dart';
+import 'package:inventa/data/models/asset.dart';
 
 /// Which fields a query is allowed to match.
 ///

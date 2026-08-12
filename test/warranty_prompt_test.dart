@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:itemize/ui/add_item/warranty_prompt_screen.dart';
+import 'package:inventa/ui/add_item/warranty_prompt_screen.dart';
 
 void main() {
   group('addWarrantyYears', () {

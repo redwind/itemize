@@ -1,7 +1,7 @@
-import 'package:itemize/data/models/asset.dart';
-import 'package:itemize/data/models/maintenance_schedule.dart';
-import 'package:itemize/data/models/service_record.dart';
-import 'package:itemize/data/repositories/asset_repository.dart';
+import 'package:inventa/data/models/asset.dart';
+import 'package:inventa/data/models/maintenance_schedule.dart';
+import 'package:inventa/data/models/service_record.dart';
+import 'package:inventa/data/repositories/asset_repository.dart';
 
 /// An asset store that lives in a list, for widget tests.
 ///

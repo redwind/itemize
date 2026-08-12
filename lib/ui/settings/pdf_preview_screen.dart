@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:itemize/core/utils/pdf_service.dart';
-import 'package:itemize/data/models/asset.dart';
-import 'package:itemize/data/models/service_record.dart';
-import 'package:itemize/providers/asset_provider.dart';
-import 'package:itemize/providers/settings_provider.dart';
-import 'package:itemize/providers/pro_provider.dart';
-import 'package:itemize/ui/settings/paywall_screen.dart';
+import 'package:inventa/core/utils/pdf_service.dart';
+import 'package:inventa/data/models/asset.dart';
+import 'package:inventa/data/models/service_record.dart';
+import 'package:inventa/providers/asset_provider.dart';
+import 'package:inventa/providers/settings_provider.dart';
+import 'package:inventa/providers/pro_provider.dart';
+import 'package:inventa/ui/settings/paywall_screen.dart';
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
-import 'package:itemize/l10n/app_localizations.dart';
+import 'package:inventa/l10n/app_localizations.dart';
 
 class PdfPreviewScreen extends ConsumerWidget {
   final List<Asset> assets;
@@ -69,7 +69,7 @@ class PdfPreviewScreen extends ConsumerWidget {
               allowSharing: !sample,
               allowPrinting: !sample,
               initialPageFormat: PdfPageFormat.a4,
-              pdfFileName: 'itemize_report.pdf',
+              pdfFileName: 'inventa_report.pdf',
             ),
           ),
         ],

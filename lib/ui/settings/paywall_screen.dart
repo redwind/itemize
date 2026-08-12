@@ -1,12 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:itemize/core/utils/free_tier.dart';
-import 'package:itemize/data/models/asset.dart';
-import 'package:itemize/providers/asset_provider.dart';
-import 'package:itemize/providers/pro_provider.dart';
-import 'package:itemize/l10n/app_localizations.dart';
-import 'package:itemize/ui/settings/pdf_preview_screen.dart';
+import 'package:inventa/core/utils/free_tier.dart';
+import 'package:inventa/data/models/asset.dart';
+import 'package:inventa/providers/asset_provider.dart';
+import 'package:inventa/providers/pro_provider.dart';
+import 'package:inventa/l10n/app_localizations.dart';
+import 'package:inventa/ui/settings/pdf_preview_screen.dart';
 
 /// How many items the sample report shows.
 ///

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:itemize/core/utils/nameplate_parser.dart';
+import 'package:inventa/core/utils/nameplate_parser.dart';
 
 void main() {
   NameplateInfo parse(String text) => NameplateParser.parse(text);

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:itemize/l10n/app_localizations.dart';
-import 'package:itemize/providers/pro_provider.dart';
-import 'package:itemize/ui/settings/paywall_screen.dart';
+import 'package:inventa/l10n/app_localizations.dart';
+import 'package:inventa/providers/pro_provider.dart';
+import 'package:inventa/ui/settings/paywall_screen.dart';
 
 void main() {
   final en = lookupAppLocalizations(const Locale('en'));

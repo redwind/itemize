@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:itemize/core/utils/warranty_status.dart';
-import 'package:itemize/data/models/asset.dart';
+import 'package:inventa/core/utils/warranty_status.dart';
+import 'package:inventa/data/models/asset.dart';
 
 // Regression coverage for the list badge, which used to compute its own
 // expired-or-not arithmetic instead of asking WarrantyStatus -- so an item

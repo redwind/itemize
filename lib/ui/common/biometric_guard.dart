@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:itemize/providers/settings_provider.dart';
-import 'package:itemize/ui/settings/biometric_lock_screen.dart';
+import 'package:inventa/providers/settings_provider.dart';
+import 'package:inventa/ui/settings/biometric_lock_screen.dart';
 
 class BiometricGuard extends ConsumerStatefulWidget {
   final Widget child;

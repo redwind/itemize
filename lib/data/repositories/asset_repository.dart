@@ -1,7 +1,7 @@
-import 'package:itemize/data/database/database_helper.dart';
-import 'package:itemize/data/models/asset.dart';
-import 'package:itemize/data/models/maintenance_schedule.dart';
-import 'package:itemize/data/models/service_record.dart';
+import 'package:inventa/data/database/database_helper.dart';
+import 'package:inventa/data/models/asset.dart';
+import 'package:inventa/data/models/maintenance_schedule.dart';
+import 'package:inventa/data/models/service_record.dart';
 
 class AssetRepository {
   final DatabaseHelper _dbHelper;

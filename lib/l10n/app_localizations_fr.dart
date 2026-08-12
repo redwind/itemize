@@ -9,7 +9,7 @@ class AppLocalizationsFr extends AppLocalizations {
   AppLocalizationsFr([String locale = 'fr']) : super(locale);
 
   @override
-  String get appTitle => 'Itemize';
+  String get appTitle => 'Inventa';
 
   @override
   String get dashboardTitle => 'Tableau de bord';
@@ -750,7 +750,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String backupShareText(int count) {
-    return 'Sauvegarde Itemize — $count biens. Conservez ce fichier là où vous le retrouverez.';
+    return 'Sauvegarde Inventa — $count biens. Conservez ce fichier là où vous le retrouverez.';
   }
 
   @override
@@ -809,7 +809,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get notificationsOff =>
-      'Les notifications sont désactivées pour Itemize. Activez-les dans les réglages de votre appareil.';
+      'Les notifications sont désactivées pour Inventa. Activez-les dans les réglages de votre appareil.';
 
   @override
   String get biometricLock => 'Verrouillage biométrique';
@@ -853,7 +853,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Authentifiez-vous pour désactiver le verrouillage';
 
   @override
-  String get appLocked => 'Itemize verrouillé';
+  String get appLocked => 'Inventa verrouillé';
 
   @override
   String get unlock => 'Déverrouiller';
@@ -928,7 +928,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get reportTitlePro => 'Inventaire du mobilier';
 
   @override
-  String get reportTitleFree => 'Rapport Itemize';
+  String get reportTitleFree => 'Rapport Inventa';
 
   @override
   String get reportItemsRecorded => 'Biens enregistrés';
@@ -1019,7 +1019,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get reportSummaryNoticeBody =>
-      'Itemize Pro ajoute une page par bien, avec ses photographies, son numéro de série, sa facture, son historique d\'entretien et sa valeur estimée du jour, ainsi qu\'une attestation signée — le document qu\'un assureur réclame lors d\'un sinistre.';
+      'Inventa Pro ajoute une page par bien, avec ses photographies, son numéro de série, sa facture, son historique d\'entretien et sa valeur estimée du jour, ainsi qu\'une attestation signée — le document qu\'un assureur réclame lors d\'un sinistre.';
 
   @override
   String reportPageOf(int page, int total) {
@@ -1027,7 +1027,7 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get reportFooterFree => 'Généré par Itemize Free';
+  String get reportFooterFree => 'Généré par Inventa Free';
 
   @override
   String get roomLivingRoom => 'Salon';

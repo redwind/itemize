@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:itemize/core/utils/ocr_service.dart';
+import 'package:inventa/core/utils/ocr_service.dart';
 
 void main() {
   final today = DateTime(2026, 7, 27);
